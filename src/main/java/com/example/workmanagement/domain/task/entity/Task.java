@@ -31,9 +31,6 @@ public class Task {
     @Column(name = "author_id", nullable = false)
     private Long authorId;
 
-    @Column(name = "current_version_no", nullable = false)
-    private Integer currentVersionNo;
-
     @Version
     @Column(name = "lock_version", nullable = false)
     private Long lockVersion;
@@ -52,11 +49,10 @@ public class Task {
     /**
      * 검토 대상 업무 엔티티를 생성한다.
      */
-    public static Task create(TaskStatus status, Long authorId, Integer currentVersionNo) {
+    public static Task create(TaskStatus status, Long authorId) {
         Task task = new Task();
         task.status = status;
         task.authorId = authorId;
-        task.currentVersionNo = currentVersionNo;
         return task;
     }
 
@@ -79,13 +75,6 @@ public class Task {
      */
     public Long getAuthorId() {
         return authorId;
-    }
-
-    /**
-     * 현재 업무 버전을 반환한다.
-     */
-    public Integer getCurrentVersionNo() {
-        return currentVersionNo;
     }
 
     /**

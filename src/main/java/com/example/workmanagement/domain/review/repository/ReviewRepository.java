@@ -19,7 +19,7 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     Optional<Review> findFirstByTask_IdOrderByRoundNoDesc(Long taskId);
 
     /**
-     * 동일 업무 버전에 제출된 검토가 이미 존재하는지 확인한다.
+     * 동일 업무에 제출된 검토가 이미 존재하는지 확인한다.
      */
-    boolean existsByTask_IdAndTaskVersionNoAndStatus(Long taskId, Integer taskVersionNo, ReviewStatus status);
+    boolean existsByTask_IdAndStatus(Long taskId, ReviewStatus status);
 }

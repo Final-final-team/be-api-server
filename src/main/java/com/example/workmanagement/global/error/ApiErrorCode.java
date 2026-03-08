@@ -34,11 +34,10 @@ public enum ApiErrorCode {
     COMMENT_UPDATE_NOT_ALLOWED(HttpStatus.CONFLICT, "Comments cannot be updated in the current review state."),
     COMMENT_DELETE_NOT_ALLOWED(HttpStatus.CONFLICT, "Comments cannot be deleted in the current review state."),
     REVIEW_VERSION_CONFLICT(HttpStatus.CONFLICT, "Review version conflict detected."),
-    TASK_VERSION_CONFLICT(HttpStatus.CONFLICT, "Task version conflict detected."),
     REJECTION_REASON_REQUIRED(HttpStatus.BAD_REQUEST, "Rejection reason is required."),
     REVIEW_ALREADY_SUBMITTED_FOR_TASK_VERSION(
             HttpStatus.CONFLICT,
-            "A submitted review already exists for the current task version."
+            "A submitted review already exists for the task."
     ),
     REFERENCE_ALREADY_ASSIGNED(HttpStatus.CONFLICT, "The user is already assigned as a reference."),
     ADDITIONAL_REVIEWER_ALREADY_ASSIGNED(HttpStatus.CONFLICT, "The user is already assigned as an additional reviewer."),

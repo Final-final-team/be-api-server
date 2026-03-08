@@ -28,7 +28,6 @@ public class ReviewResponseMapper {
         return new ReviewDetailResponse(
                 review.getId(),
                 review.getTask().getId(),
-                review.getTaskVersionNo(),
                 review.getRoundNo(),
                 review.getStatus(),
                 review.getContent(),
@@ -87,7 +86,6 @@ public class ReviewResponseMapper {
         return new ReviewSummaryResponse(
                 review.getId(),
                 review.getTask().getId(),
-                review.getTaskVersionNo(),
                 review.getRoundNo(),
                 review.getStatus(),
                 review.getLockVersion(),

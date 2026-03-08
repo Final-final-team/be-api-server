@@ -36,10 +36,6 @@ public class Review {
     @JoinColumn(name = "task_id", nullable = false)
     private Task task;
 
-    /** 검토가 연결된 업무 버전 번호 */
-    @Column(name = "task_version_no", nullable = false)
-    private Integer taskVersionNo;
-
     /** 동일 업무 내 검토 라운드 번호 */
     @Column(name = "round_no", nullable = false)
     private Integer roundNo;
@@ -99,10 +95,9 @@ public class Review {
     /**
      * 상신 상태의 새 검토를 생성한다.
      */
-    public static Review submit(Task task, Integer taskVersionNo, Integer roundNo, String content, Long submittedBy) {
+    public static Review submit(Task task, Integer roundNo, String content, Long submittedBy) {
         Review review = new Review();
         review.task = task;
-        review.taskVersionNo = taskVersionNo;
         review.roundNo = roundNo;
         review.status = ReviewStatus.SUBMITTED;
         review.content = content;
@@ -122,13 +117,6 @@ public class Review {
      */
     public Task getTask() {
         return task;
-    }
-
-    /**
-     * 검토 대상 업무 버전을 반환한다.
-     */
-    public Integer getTaskVersionNo() {
-        return taskVersionNo;
     }
 
     /**
