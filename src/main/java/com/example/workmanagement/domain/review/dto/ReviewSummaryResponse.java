@@ -9,7 +9,7 @@ public record ReviewSummaryResponse(
         Integer taskVersionNo,
         Integer roundNo,
         ReviewStatus status,
-        Long reviewVersion,
+        Long lockVersion,
         Instant submittedAt,
         Instant decidedAt
 ) {

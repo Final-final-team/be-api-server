@@ -40,7 +40,7 @@ public class ReviewAttachmentController {
     @PostMapping("/presign")
     public ResponseEntity<ApiResponse<ReviewAttachmentPresignResponse>> createPresignUrl(
             @PathVariable Long reviewId,
-            @RequestHeader("If-Match") Long reviewVersion,
+            @RequestHeader("If-Match") Long lockVersion,
             @RequestHeader("X-Actor-Id") String actorId,
             @RequestHeader(value = "X-Actor-Roles", required = false) String roles,
             @RequestHeader(value = "X-Actor-Permissions", required = false) String permissions,
@@ -51,7 +51,7 @@ public class ReviewAttachmentController {
                         "Attachment presign URL created.",
                         reviewCommandService.createAttachmentPresignUrl(
                                 reviewId,
-                                reviewVersion,
+                                lockVersion,
                                 request,
                                 resolveActor(actorId, roles, permissions)
                         )
@@ -64,7 +64,7 @@ public class ReviewAttachmentController {
     @PostMapping
     public ResponseEntity<ApiResponse<ReviewDetailResponse>> confirmAttachment(
             @PathVariable Long reviewId,
-            @RequestHeader("If-Match") Long reviewVersion,
+            @RequestHeader("If-Match") Long lockVersion,
             @RequestHeader("X-Actor-Id") String actorId,
             @RequestHeader(value = "X-Actor-Roles", required = false) String roles,
             @RequestHeader(value = "X-Actor-Permissions", required = false) String permissions,
@@ -75,7 +75,7 @@ public class ReviewAttachmentController {
                         "Review attachment confirmed.",
                         reviewCommandService.confirmAttachment(
                                 reviewId,
-                                reviewVersion,
+                                lockVersion,
                                 request,
                                 resolveActor(actorId, roles, permissions)
                         )
@@ -89,7 +89,7 @@ public class ReviewAttachmentController {
     public ResponseEntity<ApiResponse<ReviewDetailResponse>> deleteAttachment(
             @PathVariable Long reviewId,
             @PathVariable Long attachmentId,
-            @RequestHeader("If-Match") Long reviewVersion,
+            @RequestHeader("If-Match") Long lockVersion,
             @RequestHeader("X-Actor-Id") String actorId,
             @RequestHeader(value = "X-Actor-Roles", required = false) String roles,
             @RequestHeader(value = "X-Actor-Permissions", required = false) String permissions
@@ -99,7 +99,7 @@ public class ReviewAttachmentController {
                 reviewCommandService.deleteAttachment(
                         reviewId,
                         attachmentId,
-                        reviewVersion,
+                        lockVersion,
                         resolveActor(actorId, roles, permissions)
                 )
         ));

@@ -15,7 +15,7 @@ public record ReviewDetailResponse(
         Long submittedBy,
         Long decidedBy,
         Long cancelledBy,
-        Long reviewVersion,
+        Long lockVersion,
         Instant submittedAt,
         Instant decidedAt,
         Instant cancelledAt,

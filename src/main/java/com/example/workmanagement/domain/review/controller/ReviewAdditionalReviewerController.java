@@ -38,7 +38,7 @@ public class ReviewAdditionalReviewerController {
     @PostMapping
     public ResponseEntity<ApiResponse<ReviewDetailResponse>> addAdditionalReviewer(
             @PathVariable Long reviewId,
-            @RequestHeader("If-Match") Long reviewVersion,
+            @RequestHeader("If-Match") Long lockVersion,
             @RequestHeader("X-Actor-Id") String actorId,
             @RequestHeader(value = "X-Actor-Roles", required = false) String roles,
             @RequestHeader(value = "X-Actor-Permissions", required = false) String permissions,
@@ -49,7 +49,7 @@ public class ReviewAdditionalReviewerController {
                         "Additional reviewer assigned.",
                         reviewCommandService.addAdditionalReviewer(
                                 reviewId,
-                                reviewVersion,
+                                lockVersion,
                                 request,
                                 resolveActor(actorId, roles, permissions)
                         )
@@ -63,7 +63,7 @@ public class ReviewAdditionalReviewerController {
     public ResponseEntity<ApiResponse<ReviewDetailResponse>> removeAdditionalReviewer(
             @PathVariable Long reviewId,
             @PathVariable Long userId,
-            @RequestHeader("If-Match") Long reviewVersion,
+            @RequestHeader("If-Match") Long lockVersion,
             @RequestHeader("X-Actor-Id") String actorId,
             @RequestHeader(value = "X-Actor-Roles", required = false) String roles,
             @RequestHeader(value = "X-Actor-Permissions", required = false) String permissions
@@ -73,7 +73,7 @@ public class ReviewAdditionalReviewerController {
                 reviewCommandService.removeAdditionalReviewer(
                         reviewId,
                         userId,
-                        reviewVersion,
+                        lockVersion,
                         resolveActor(actorId, roles, permissions)
                 )
         ));

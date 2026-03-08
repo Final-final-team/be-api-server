@@ -84,7 +84,7 @@ public class ReviewController {
     @PatchMapping("/reviews/{reviewId}")
     public ResponseEntity<ApiResponse<ReviewDetailResponse>> updateReview(
             @PathVariable Long reviewId,
-            @RequestHeader("If-Match") Long reviewVersion,
+            @RequestHeader("If-Match") Long lockVersion,
             @RequestHeader("X-Actor-Id") String actorId,
             @RequestHeader(value = "X-Actor-Roles", required = false) String roles,
             @RequestHeader(value = "X-Actor-Permissions", required = false) String permissions,
@@ -94,7 +94,7 @@ public class ReviewController {
                 "Review updated.",
                 reviewCommandService.updateReview(
                         reviewId,
-                        reviewVersion,
+                        lockVersion,
                         request,
                         resolveActor(actorId, roles, permissions)
                 )
@@ -107,7 +107,7 @@ public class ReviewController {
     @PostMapping("/reviews/{reviewId}/approve")
     public ResponseEntity<ApiResponse<ReviewDetailResponse>> approveReview(
             @PathVariable Long reviewId,
-            @RequestHeader("If-Match") Long reviewVersion,
+            @RequestHeader("If-Match") Long lockVersion,
             @RequestHeader("X-Actor-Id") String actorId,
             @RequestHeader(value = "X-Actor-Roles", required = false) String roles,
             @RequestHeader(value = "X-Actor-Permissions", required = false) String permissions
@@ -117,7 +117,7 @@ public class ReviewController {
                         "Review approved.",
                         reviewCommandService.approveReview(
                                 reviewId,
-                                reviewVersion,
+                                lockVersion,
                                 resolveActor(actorId, roles, permissions)
                         )
                 )
@@ -130,7 +130,7 @@ public class ReviewController {
     @PostMapping("/reviews/{reviewId}/reject")
     public ResponseEntity<ApiResponse<ReviewDetailResponse>> rejectReview(
             @PathVariable Long reviewId,
-            @RequestHeader("If-Match") Long reviewVersion,
+            @RequestHeader("If-Match") Long lockVersion,
             @RequestHeader("X-Actor-Id") String actorId,
             @RequestHeader(value = "X-Actor-Roles", required = false) String roles,
             @RequestHeader(value = "X-Actor-Permissions", required = false) String permissions,
@@ -141,7 +141,7 @@ public class ReviewController {
                         "Review rejected.",
                         reviewCommandService.rejectReview(
                                 reviewId,
-                                reviewVersion,
+                                lockVersion,
                                 request,
                                 resolveActor(actorId, roles, permissions)
                         )
@@ -155,7 +155,7 @@ public class ReviewController {
     @PostMapping("/reviews/{reviewId}/cancel")
     public ResponseEntity<ApiResponse<ReviewDetailResponse>> cancelReview(
             @PathVariable Long reviewId,
-            @RequestHeader("If-Match") Long reviewVersion,
+            @RequestHeader("If-Match") Long lockVersion,
             @RequestHeader("X-Actor-Id") String actorId,
             @RequestHeader(value = "X-Actor-Roles", required = false) String roles,
             @RequestHeader(value = "X-Actor-Permissions", required = false) String permissions,
@@ -167,7 +167,7 @@ public class ReviewController {
                         "Review cancelled.",
                         reviewCommandService.cancelReview(
                                 reviewId,
-                                reviewVersion,
+                                lockVersion,
                                 cancelRequest,
                                 resolveActor(actorId, roles, permissions)
                         )
