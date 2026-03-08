@@ -6,7 +6,6 @@ import java.time.Instant;
 public record ReviewSummaryResponse(
         Long reviewId,
         Long taskId,
-        Integer taskVersionNo,
         Integer roundNo,
         ReviewStatus status,
         Long lockVersion,

@@ -8,7 +8,6 @@ import jakarta.validation.constraints.PositiveOrZero;
 import java.util.List;
 
 public record ReviewCreateRequest(
-        @NotNull Integer taskVersionNo,
         @NotBlank String content,
         List<Long> referenceUserIds,
         List<@Valid AttachmentDraft> attachments

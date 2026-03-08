@@ -7,7 +7,6 @@ import java.util.List;
 public record ReviewDetailResponse(
         Long reviewId,
         Long taskId,
-        Integer taskVersionNo,
         Integer roundNo,
         ReviewStatus status,
         String content,
