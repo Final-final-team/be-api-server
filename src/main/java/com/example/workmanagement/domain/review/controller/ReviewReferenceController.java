@@ -38,7 +38,7 @@ public class ReviewReferenceController {
     @PostMapping
     public ResponseEntity<ApiResponse<ReviewDetailResponse>> addReference(
             @PathVariable Long reviewId,
-            @RequestHeader("If-Match") Long reviewVersion,
+            @RequestHeader("If-Match") Long lockVersion,
             @RequestHeader("X-Actor-Id") String actorId,
             @RequestHeader(value = "X-Actor-Roles", required = false) String roles,
             @RequestHeader(value = "X-Actor-Permissions", required = false) String permissions,
@@ -49,7 +49,7 @@ public class ReviewReferenceController {
                         "Review reference assigned.",
                         reviewCommandService.addReference(
                                 reviewId,
-                                reviewVersion,
+                                lockVersion,
                                 request,
                                 resolveActor(actorId, roles, permissions)
                         )
@@ -59,11 +59,11 @@ public class ReviewReferenceController {
     /**
      * 검토 참조자를 제거한다.
      */
-    @DeleteMapping("/{userId}")
+            @DeleteMapping("/{userId}")
     public ResponseEntity<ApiResponse<ReviewDetailResponse>> removeReference(
             @PathVariable Long reviewId,
             @PathVariable Long userId,
-            @RequestHeader("If-Match") Long reviewVersion,
+            @RequestHeader("If-Match") Long lockVersion,
             @RequestHeader("X-Actor-Id") String actorId,
             @RequestHeader(value = "X-Actor-Roles", required = false) String roles,
             @RequestHeader(value = "X-Actor-Permissions", required = false) String permissions
@@ -73,7 +73,7 @@ public class ReviewReferenceController {
                 reviewCommandService.removeReference(
                         reviewId,
                         userId,
-                        reviewVersion,
+                        lockVersion,
                         resolveActor(actorId, roles, permissions)
                 )
         ));

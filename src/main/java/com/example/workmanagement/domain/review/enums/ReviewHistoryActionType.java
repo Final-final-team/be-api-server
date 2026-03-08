@@ -3,6 +3,7 @@ package com.example.workmanagement.domain.review.enums;
 public enum ReviewHistoryActionType {
     REVIEW_CREATED,
     REVIEW_RESUBMITTED,
+    REVIEW_UPDATED,
     REVIEW_APPROVED,
     REVIEW_REJECTED,
     REVIEW_CANCELLED,

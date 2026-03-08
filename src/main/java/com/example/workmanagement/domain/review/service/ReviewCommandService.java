@@ -13,31 +13,50 @@ import com.example.workmanagement.domain.review.dto.ReviewDecisionRequest;
 import com.example.workmanagement.domain.review.dto.ReviewDetailResponse;
 import com.example.workmanagement.domain.review.dto.ReviewReferenceAssignRequest;
 import com.example.workmanagement.domain.review.dto.ReviewUpdateRequest;
-import com.example.workmanagement.global.error.NotYetImplementedException;
 import org.springframework.stereotype.Service;
 
 @Service
 public class ReviewCommandService {
 
+    private final ReviewLifecycleService reviewLifecycleService;
+    private final ReviewReferenceService reviewReferenceService;
+    private final ReviewAttachmentService reviewAttachmentService;
+    private final ReviewAdditionalReviewerService reviewAdditionalReviewerService;
+    private final ReviewCommentService reviewCommentService;
+
+    public ReviewCommandService(
+            ReviewLifecycleService reviewLifecycleService,
+            ReviewReferenceService reviewReferenceService,
+            ReviewAttachmentService reviewAttachmentService,
+            ReviewAdditionalReviewerService reviewAdditionalReviewerService,
+            ReviewCommentService reviewCommentService
+    ) {
+        this.reviewLifecycleService = reviewLifecycleService;
+        this.reviewReferenceService = reviewReferenceService;
+        this.reviewAttachmentService = reviewAttachmentService;
+        this.reviewAdditionalReviewerService = reviewAdditionalReviewerService;
+        this.reviewCommentService = reviewCommentService;
+    }
+
     /**
      * 최초 상신 또는 재상신용 검토를 생성한다.
      */
     public ReviewDetailResponse submitReview(Long taskId, ReviewCreateRequest request, ActorContext actor) {
-        throw new NotYetImplementedException("Review submission flow is scaffolded but not implemented.");
+        return reviewLifecycleService.submitReview(taskId, request, actor);
     }
 
     /**
      * 제출된 검토의 본문을 수정한다.
      */
-    public ReviewDetailResponse updateReview(Long reviewId, Long reviewVersion, ReviewUpdateRequest request, ActorContext actor) {
-        throw new NotYetImplementedException("Review update flow is scaffolded but not implemented.");
+    public ReviewDetailResponse updateReview(Long reviewId, Long lockVersion, ReviewUpdateRequest request, ActorContext actor) {
+        return reviewLifecycleService.updateReview(reviewId, lockVersion, request, actor);
     }
 
     /**
      * 제출된 검토를 승인한다.
      */
-    public ReviewDetailResponse approveReview(Long reviewId, Long reviewVersion, ActorContext actor) {
-        throw new NotYetImplementedException("Review approval flow is scaffolded but not implemented.");
+    public ReviewDetailResponse approveReview(Long reviewId, Long lockVersion, ActorContext actor) {
+        return reviewLifecycleService.approveReview(reviewId, lockVersion, actor);
     }
 
     /**
@@ -45,11 +64,11 @@ public class ReviewCommandService {
      */
     public ReviewDetailResponse rejectReview(
             Long reviewId,
-            Long reviewVersion,
+            Long lockVersion,
             ReviewDecisionRequest request,
             ActorContext actor
     ) {
-        throw new NotYetImplementedException("Review rejection flow is scaffolded but not implemented.");
+        return reviewLifecycleService.rejectReview(reviewId, lockVersion, request, actor);
     }
 
     /**
@@ -57,11 +76,11 @@ public class ReviewCommandService {
      */
     public ReviewDetailResponse cancelReview(
             Long reviewId,
-            Long reviewVersion,
+            Long lockVersion,
             ReviewCancelRequest request,
             ActorContext actor
     ) {
-        throw new NotYetImplementedException("Review cancellation flow is scaffolded but not implemented.");
+        return reviewLifecycleService.cancelReview(reviewId, lockVersion, request, actor);
     }
 
     /**
@@ -69,18 +88,18 @@ public class ReviewCommandService {
      */
     public ReviewDetailResponse addReference(
             Long reviewId,
-            Long reviewVersion,
+            Long lockVersion,
             ReviewReferenceAssignRequest request,
             ActorContext actor
     ) {
-        throw new NotYetImplementedException("Reference assignment flow is scaffolded but not implemented.");
+        return reviewReferenceService.addReference(reviewId, lockVersion, request, actor);
     }
 
     /**
      * 검토 참조자를 제거한다.
      */
-    public ReviewDetailResponse removeReference(Long reviewId, Long userId, Long reviewVersion, ActorContext actor) {
-        throw new NotYetImplementedException("Reference removal flow is scaffolded but not implemented.");
+    public ReviewDetailResponse removeReference(Long reviewId, Long userId, Long lockVersion, ActorContext actor) {
+        return reviewReferenceService.removeReference(reviewId, userId, lockVersion, actor);
     }
 
     /**
@@ -88,11 +107,11 @@ public class ReviewCommandService {
      */
     public ReviewAttachmentPresignResponse createAttachmentPresignUrl(
             Long reviewId,
-            Long reviewVersion,
+            Long lockVersion,
             ReviewAttachmentPresignRequest request,
             ActorContext actor
     ) {
-        throw new NotYetImplementedException("Attachment presign flow is scaffolded but not implemented.");
+        return reviewAttachmentService.createAttachmentPresignUrl(reviewId, lockVersion, request, actor);
     }
 
     /**
@@ -100,18 +119,18 @@ public class ReviewCommandService {
      */
     public ReviewDetailResponse confirmAttachment(
             Long reviewId,
-            Long reviewVersion,
+            Long lockVersion,
             ReviewAttachmentConfirmRequest request,
             ActorContext actor
     ) {
-        throw new NotYetImplementedException("Attachment confirmation flow is scaffolded but not implemented.");
+        return reviewAttachmentService.confirmAttachment(reviewId, lockVersion, request, actor);
     }
 
     /**
      * 검토 첨부를 제거한다.
      */
-    public ReviewDetailResponse deleteAttachment(Long reviewId, Long attachmentId, Long reviewVersion, ActorContext actor) {
-        throw new NotYetImplementedException("Attachment deletion flow is scaffolded but not implemented.");
+    public ReviewDetailResponse deleteAttachment(Long reviewId, Long attachmentId, Long lockVersion, ActorContext actor) {
+        return reviewAttachmentService.deleteAttachment(reviewId, attachmentId, lockVersion, actor);
     }
 
     /**
@@ -119,11 +138,11 @@ public class ReviewCommandService {
      */
     public ReviewDetailResponse addAdditionalReviewer(
             Long reviewId,
-            Long reviewVersion,
+            Long lockVersion,
             ReviewAdditionalReviewerAssignRequest request,
             ActorContext actor
     ) {
-        throw new NotYetImplementedException("Additional reviewer assignment flow is scaffolded but not implemented.");
+        return reviewAdditionalReviewerService.addAdditionalReviewer(reviewId, lockVersion, request, actor);
     }
 
     /**
@@ -132,17 +151,17 @@ public class ReviewCommandService {
     public ReviewDetailResponse removeAdditionalReviewer(
             Long reviewId,
             Long userId,
-            Long reviewVersion,
+            Long lockVersion,
             ActorContext actor
     ) {
-        throw new NotYetImplementedException("Additional reviewer removal flow is scaffolded but not implemented.");
+        return reviewAdditionalReviewerService.removeAdditionalReviewer(reviewId, userId, lockVersion, actor);
     }
 
     /**
      * 검토 코멘트를 생성한다.
      */
     public ReviewDetailResponse addComment(Long reviewId, ReviewCommentCreateRequest request, ActorContext actor) {
-        throw new NotYetImplementedException("Comment creation flow is scaffolded but not implemented.");
+        return reviewCommentService.addComment(reviewId, request, actor);
     }
 
     /**
@@ -154,13 +173,13 @@ public class ReviewCommandService {
             ReviewCommentUpdateRequest request,
             ActorContext actor
     ) {
-        throw new NotYetImplementedException("Comment update flow is scaffolded but not implemented.");
+        return reviewCommentService.updateComment(reviewId, commentId, request, actor);
     }
 
     /**
      * 검토 코멘트를 삭제한다.
      */
     public ReviewDetailResponse deleteComment(Long reviewId, Long commentId, ActorContext actor) {
-        throw new NotYetImplementedException("Comment deletion flow is scaffolded but not implemented.");
+        return reviewCommentService.deleteComment(reviewId, commentId, actor);
     }
 }
