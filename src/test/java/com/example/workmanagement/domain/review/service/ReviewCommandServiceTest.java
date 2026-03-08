@@ -62,11 +62,11 @@ class ReviewCommandServiceTest {
      */
     @Test
     void submitReviewByAuthorChangesTaskAndCreatesSubmittedReview() {
-        Task task = taskRepository.saveAndFlush(Task.create(TaskStatus.IN_PROGRESS, 101L, 3));
+        Task task = taskRepository.saveAndFlush(Task.create(TaskStatus.IN_PROGRESS, 101L));
 
         ReviewDetailResponse response = reviewCommandService.submitReview(
                 task.getId(),
-                new ReviewCreateRequest(3, "검토 요청 본문", List.of(201L, 202L), List.of()),
+                new ReviewCreateRequest("검토 요청 본문", List.of(201L, 202L), List.of()),
                 actor(101L)
         );
 
@@ -83,14 +83,32 @@ class ReviewCommandServiceTest {
      */
     @Test
     void submitReviewWithoutPermissionFails() {
-        Task task = taskRepository.saveAndFlush(Task.create(TaskStatus.IN_PROGRESS, 101L, 3));
+        Task task = taskRepository.saveAndFlush(Task.create(TaskStatus.IN_PROGRESS, 101L));
 
         assertErrorCode(
                 ApiErrorCode.REVIEW_SUBMIT_FORBIDDEN,
                 () -> reviewCommandService.submitReview(
                         task.getId(),
-                        new ReviewCreateRequest(3, "검토 요청 본문", List.of(), List.of()),
+                        new ReviewCreateRequest("검토 요청 본문", List.of(), List.of()),
                         actor(999L)
+                )
+        );
+    }
+
+    /**
+     * 같은 업무에 제출 상태 검토가 있으면 새 상신이 거부되어야 한다.
+     */
+    @Test
+    void submitReviewFailsWhenSubmittedReviewAlreadyExists() {
+        Task task = taskRepository.saveAndFlush(Task.create(TaskStatus.IN_PROGRESS, 101L));
+        reviewRepository.saveAndFlush(Review.submit(task, 1, "기존 본문", 101L));
+
+        assertErrorCode(
+                ApiErrorCode.REVIEW_ALREADY_SUBMITTED_FOR_TASK_VERSION,
+                () -> reviewCommandService.submitReview(
+                        task.getId(),
+                        new ReviewCreateRequest("새 검토 요청", List.of(), List.of()),
+                        actor(101L)
                 )
         );
     }
@@ -100,8 +118,8 @@ class ReviewCommandServiceTest {
      */
     @Test
     void updateReviewOnlyAllowedInSubmitted() {
-        Task task = taskRepository.saveAndFlush(Task.create(TaskStatus.IN_REVIEW, 101L, 3));
-        Review review = reviewRepository.saveAndFlush(Review.submit(task, 3, 1, "원본", 101L));
+        Task task = taskRepository.saveAndFlush(Task.create(TaskStatus.IN_REVIEW, 101L));
+        Review review = reviewRepository.saveAndFlush(Review.submit(task, 1, "원본", 101L));
         review.approve(301L, java.time.Instant.now());
         reviewRepository.flush();
 
@@ -121,8 +139,8 @@ class ReviewCommandServiceTest {
      */
     @Test
     void approveFailsForReferenceUser() {
-        Task task = taskRepository.saveAndFlush(Task.create(TaskStatus.IN_REVIEW, 101L, 3));
-        Review review = reviewRepository.saveAndFlush(Review.submit(task, 3, 1, "본문", 101L));
+        Task task = taskRepository.saveAndFlush(Task.create(TaskStatus.IN_REVIEW, 101L));
+        Review review = reviewRepository.saveAndFlush(Review.submit(task, 1, "본문", 101L));
         reviewReferenceRepository.saveAndFlush(ReviewReference.create(review, 201L, 101L));
 
         assertErrorCode(
@@ -136,8 +154,8 @@ class ReviewCommandServiceTest {
      */
     @Test
     void approveSucceedsForAdditionalReviewer() {
-        Task task = taskRepository.saveAndFlush(Task.create(TaskStatus.IN_REVIEW, 101L, 3));
-        Review review = reviewRepository.saveAndFlush(Review.submit(task, 3, 1, "본문", 101L));
+        Task task = taskRepository.saveAndFlush(Task.create(TaskStatus.IN_REVIEW, 101L));
+        Review review = reviewRepository.saveAndFlush(Review.submit(task, 1, "본문", 101L));
         reviewAdditionalReviewerRepository.saveAndFlush(ReviewAdditionalReviewer.create(review, 401L, 101L));
 
         ReviewDetailResponse response = reviewCommandService.approveReview(review.getId(), review.getLockVersion(), actor(401L));
@@ -152,8 +170,8 @@ class ReviewCommandServiceTest {
      */
     @Test
     void cancelReviewOnlyAllowedForSubmitter() {
-        Task task = taskRepository.saveAndFlush(Task.create(TaskStatus.IN_REVIEW, 101L, 3));
-        Review review = reviewRepository.saveAndFlush(Review.submit(task, 3, 1, "본문", 101L));
+        Task task = taskRepository.saveAndFlush(Task.create(TaskStatus.IN_REVIEW, 101L));
+        Review review = reviewRepository.saveAndFlush(Review.submit(task, 1, "본문", 101L));
 
         assertErrorCode(
                 ApiErrorCode.REVIEW_CANCEL_FORBIDDEN,
@@ -181,8 +199,8 @@ class ReviewCommandServiceTest {
      */
     @Test
     void addReferenceOnlyAllowedInSubmitted() {
-        Task task = taskRepository.saveAndFlush(Task.create(TaskStatus.IN_REVIEW, 101L, 3));
-        Review review = reviewRepository.saveAndFlush(Review.submit(task, 3, 1, "본문", 101L));
+        Task task = taskRepository.saveAndFlush(Task.create(TaskStatus.IN_REVIEW, 101L));
+        Review review = reviewRepository.saveAndFlush(Review.submit(task, 1, "본문", 101L));
         review.reject(301L, "반려", java.time.Instant.now());
         reviewRepository.flush();
 
@@ -202,8 +220,8 @@ class ReviewCommandServiceTest {
      */
     @Test
     void addAdditionalReviewerRejectsDuplicateAssignment() {
-        Task task = taskRepository.saveAndFlush(Task.create(TaskStatus.IN_REVIEW, 101L, 3));
-        Review review = reviewRepository.saveAndFlush(Review.submit(task, 3, 1, "본문", 101L));
+        Task task = taskRepository.saveAndFlush(Task.create(TaskStatus.IN_REVIEW, 101L));
+        Review review = reviewRepository.saveAndFlush(Review.submit(task, 1, "본문", 101L));
         reviewAdditionalReviewerRepository.saveAndFlush(ReviewAdditionalReviewer.create(review, 401L, 101L));
 
         assertErrorCode(
@@ -222,8 +240,8 @@ class ReviewCommandServiceTest {
      */
     @Test
     void approvedReviewAllowsCommentCreateButNotUpdate() {
-        Task task = taskRepository.saveAndFlush(Task.create(TaskStatus.COMPLETED, 101L, 3));
-        Review review = reviewRepository.saveAndFlush(Review.submit(task, 3, 1, "본문", 101L));
+        Task task = taskRepository.saveAndFlush(Task.create(TaskStatus.COMPLETED, 101L));
+        Review review = reviewRepository.saveAndFlush(Review.submit(task, 1, "본문", 101L));
         review.approve(301L, java.time.Instant.now());
         reviewRepository.flush();
 
@@ -252,8 +270,8 @@ class ReviewCommandServiceTest {
      */
     @Test
     void rejectedReviewBlocksCommentMutations() {
-        Task task = taskRepository.saveAndFlush(Task.create(TaskStatus.IN_PROGRESS, 101L, 3));
-        Review review = reviewRepository.saveAndFlush(Review.submit(task, 3, 1, "본문", 101L));
+        Task task = taskRepository.saveAndFlush(Task.create(TaskStatus.IN_PROGRESS, 101L));
+        Review review = reviewRepository.saveAndFlush(Review.submit(task, 1, "본문", 101L));
         ReviewComment comment = reviewCommentRepository.saveAndFlush(ReviewComment.create(review, 101L, "기존 코멘트"));
         review.reject(301L, "반려", java.time.Instant.now());
         reviewRepository.flush();
@@ -277,8 +295,8 @@ class ReviewCommandServiceTest {
      */
     @Test
     void updateReviewFailsOnVersionConflict() {
-        Task task = taskRepository.saveAndFlush(Task.create(TaskStatus.IN_REVIEW, 101L, 3));
-        Review review = reviewRepository.saveAndFlush(Review.submit(task, 3, 1, "본문", 101L));
+        Task task = taskRepository.saveAndFlush(Task.create(TaskStatus.IN_REVIEW, 101L));
+        Review review = reviewRepository.saveAndFlush(Review.submit(task, 1, "본문", 101L));
 
         assertErrorCode(
                 ApiErrorCode.REVIEW_VERSION_CONFLICT,
@@ -292,18 +310,22 @@ class ReviewCommandServiceTest {
     }
 
     /**
-     * 승인 시 업무 버전과 검토 버전이 다르면 승인할 수 없어야 한다.
+     * 반려 이후 재상신하면 같은 업무의 검토 라운드가 증가해야 한다.
      */
     @Test
-    void approveFailsWhenTaskVersionDiffers() {
-        Task task = taskRepository.saveAndFlush(Task.create(TaskStatus.IN_REVIEW, 101L, 4));
-        Review review = reviewRepository.saveAndFlush(Review.submit(task, 3, 1, "본문", 101L));
-        reviewAdditionalReviewerRepository.saveAndFlush(ReviewAdditionalReviewer.create(review, 401L, 101L));
+    void resubmissionIncreasesRoundNumber() {
+        Task task = taskRepository.saveAndFlush(Task.create(TaskStatus.IN_PROGRESS, 101L));
+        Review rejectedReview = reviewRepository.saveAndFlush(Review.submit(task, 1, "첫 본문", 101L));
+        rejectedReview.reject(301L, "반려", java.time.Instant.now());
+        reviewRepository.flush();
 
-        assertErrorCode(
-                ApiErrorCode.TASK_VERSION_CONFLICT,
-                () -> reviewCommandService.approveReview(review.getId(), review.getLockVersion(), actor(401L))
+        ReviewDetailResponse response = reviewCommandService.submitReview(
+                task.getId(),
+                new ReviewCreateRequest("재상신 본문", List.of(), List.of()),
+                actor(101L)
         );
+
+        assertThat(response.roundNo()).isEqualTo(2);
     }
 
     /**
@@ -311,8 +333,8 @@ class ReviewCommandServiceTest {
      */
     @Test
     void approvedReviewAllowsCommentCreationForReviewerPermission() {
-        Task task = taskRepository.saveAndFlush(Task.create(TaskStatus.COMPLETED, 101L, 3));
-        Review review = reviewRepository.saveAndFlush(Review.submit(task, 3, 1, "본문", 101L));
+        Task task = taskRepository.saveAndFlush(Task.create(TaskStatus.COMPLETED, 101L));
+        Review review = reviewRepository.saveAndFlush(Review.submit(task, 1, "본문", 101L));
         review.approve(301L, java.time.Instant.now());
         reviewRepository.flush();
 
