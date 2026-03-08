@@ -1,0 +1,17 @@
+package com.example.workmanagement.domain.review.enums;
+
+public enum ReviewHistoryActionType {
+    REVIEW_CREATED,
+    REVIEW_RESUBMITTED,
+    REVIEW_APPROVED,
+    REVIEW_REJECTED,
+    REVIEW_CANCELLED,
+    REFERENCE_ASSIGNED,
+    REFERENCE_REMOVED,
+    ATTACHMENT_ADDED,
+    ATTACHMENT_REMOVED,
+    COMMENT_CREATED,
+    COMMENT_UPDATED,
+    COMMENT_DELETED
+}
+
