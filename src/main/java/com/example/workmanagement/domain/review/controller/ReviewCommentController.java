@@ -7,6 +7,9 @@ import com.example.workmanagement.domain.review.dto.ReviewCommentUpdateRequest;
 import com.example.workmanagement.domain.review.dto.ReviewDetailResponse;
 import com.example.workmanagement.domain.review.service.ReviewCommandService;
 import com.example.workmanagement.global.response.ApiResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/reviews/{reviewId}/comments")
+@Tag(name = "검토 코멘트", description = "검토 코멘트 생성, 수정, 삭제 API")
 public class ReviewCommentController {
 
     private final ReviewCommandService reviewCommandService;
@@ -38,8 +42,11 @@ public class ReviewCommentController {
      * 검토 코멘트를 생성한다.
      */
     @PostMapping
+    @Operation(summary = "코멘트 생성", description = "검토에 새 코멘트를 등록합니다.")
     public ResponseEntity<ApiResponse<ReviewDetailResponse>> addComment(
+            @Parameter(description = "대상 검토 ID", example = "10")
             @PathVariable Long reviewId,
+            @Parameter(description = "요청자 사용자 ID", example = "301")
             @RequestHeader("X-Actor-Id") String actorId,
             @RequestHeader(value = "X-Actor-Roles", required = false) String roles,
             @RequestHeader(value = "X-Actor-Permissions", required = false) String permissions,
@@ -60,9 +67,13 @@ public class ReviewCommentController {
      * 검토 코멘트를 수정한다.
      */
     @PatchMapping("/{commentId}")
+    @Operation(summary = "코멘트 수정", description = "기존 검토 코멘트의 내용을 수정합니다.")
     public ResponseEntity<ApiResponse<ReviewDetailResponse>> updateComment(
+            @Parameter(description = "대상 검토 ID", example = "10")
             @PathVariable Long reviewId,
+            @Parameter(description = "수정할 코멘트 ID", example = "7")
             @PathVariable Long commentId,
+            @Parameter(description = "요청자 사용자 ID", example = "301")
             @RequestHeader("X-Actor-Id") String actorId,
             @RequestHeader(value = "X-Actor-Roles", required = false) String roles,
             @RequestHeader(value = "X-Actor-Permissions", required = false) String permissions,
@@ -83,9 +94,13 @@ public class ReviewCommentController {
      * 검토 코멘트를 삭제한다.
      */
     @DeleteMapping("/{commentId}")
+    @Operation(summary = "코멘트 삭제", description = "검토에 등록된 코멘트를 삭제합니다.")
     public ResponseEntity<ApiResponse<ReviewDetailResponse>> deleteComment(
+            @Parameter(description = "대상 검토 ID", example = "10")
             @PathVariable Long reviewId,
+            @Parameter(description = "삭제할 코멘트 ID", example = "7")
             @PathVariable Long commentId,
+            @Parameter(description = "요청자 사용자 ID", example = "301")
             @RequestHeader("X-Actor-Id") String actorId,
             @RequestHeader(value = "X-Actor-Roles", required = false) String roles,
             @RequestHeader(value = "X-Actor-Permissions", required = false) String permissions

@@ -8,6 +8,9 @@ import com.example.workmanagement.domain.review.dto.ReviewAttachmentPresignRespo
 import com.example.workmanagement.domain.review.dto.ReviewDetailResponse;
 import com.example.workmanagement.domain.review.service.ReviewCommandService;
 import com.example.workmanagement.global.response.ApiResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/reviews/{reviewId}/attachments")
+@Tag(name = "검토 첨부", description = "검토 첨부 업로드와 삭제 API")
 public class ReviewAttachmentController {
 
     private final ReviewCommandService reviewCommandService;
@@ -38,9 +42,13 @@ public class ReviewAttachmentController {
      * 첨부 업로드용 presigned URL을 발급한다.
      */
     @PostMapping("/presign")
+    @Operation(summary = "첨부 업로드 URL 발급", description = "검토 첨부 파일 업로드를 위한 presigned URL을 발급합니다.")
     public ResponseEntity<ApiResponse<ReviewAttachmentPresignResponse>> createPresignUrl(
+            @Parameter(description = "대상 검토 ID", example = "10")
             @PathVariable Long reviewId,
+            @Parameter(description = "낙관적 락 검증용 버전", example = "3")
             @RequestHeader("If-Match") Long lockVersion,
+            @Parameter(description = "요청자 사용자 ID", example = "101")
             @RequestHeader("X-Actor-Id") String actorId,
             @RequestHeader(value = "X-Actor-Roles", required = false) String roles,
             @RequestHeader(value = "X-Actor-Permissions", required = false) String permissions,
@@ -62,9 +70,13 @@ public class ReviewAttachmentController {
      * 업로드 완료된 첨부를 검토에 확정 반영한다.
      */
     @PostMapping
+    @Operation(summary = "첨부 등록 확정", description = "업로드가 완료된 첨부 파일을 검토에 반영합니다.")
     public ResponseEntity<ApiResponse<ReviewDetailResponse>> confirmAttachment(
+            @Parameter(description = "대상 검토 ID", example = "10")
             @PathVariable Long reviewId,
+            @Parameter(description = "낙관적 락 검증용 버전", example = "3")
             @RequestHeader("If-Match") Long lockVersion,
+            @Parameter(description = "요청자 사용자 ID", example = "101")
             @RequestHeader("X-Actor-Id") String actorId,
             @RequestHeader(value = "X-Actor-Roles", required = false) String roles,
             @RequestHeader(value = "X-Actor-Permissions", required = false) String permissions,
@@ -86,10 +98,15 @@ public class ReviewAttachmentController {
      * 검토 첨부를 제거한다.
      */
     @DeleteMapping("/{attachmentId}")
+    @Operation(summary = "첨부 삭제", description = "검토에 등록된 첨부 파일을 삭제합니다.")
     public ResponseEntity<ApiResponse<ReviewDetailResponse>> deleteAttachment(
+            @Parameter(description = "대상 검토 ID", example = "10")
             @PathVariable Long reviewId,
+            @Parameter(description = "삭제할 첨부 ID", example = "5")
             @PathVariable Long attachmentId,
+            @Parameter(description = "낙관적 락 검증용 버전", example = "3")
             @RequestHeader("If-Match") Long lockVersion,
+            @Parameter(description = "요청자 사용자 ID", example = "101")
             @RequestHeader("X-Actor-Id") String actorId,
             @RequestHeader(value = "X-Actor-Roles", required = false) String roles,
             @RequestHeader(value = "X-Actor-Permissions", required = false) String permissions
