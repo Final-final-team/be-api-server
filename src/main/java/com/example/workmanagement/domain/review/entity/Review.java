@@ -17,6 +17,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import java.time.Instant;
+import java.util.Objects;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -92,17 +93,19 @@ public class Review {
     protected Review() {
     }
 
+    private Review(Task task, Integer roundNo, String content, Long submittedBy) {
+        this.task = Objects.requireNonNull(task, "task must not be null");
+        this.roundNo = validateRoundNo(roundNo);
+        this.content = validateContent(content);
+        this.submittedBy = Objects.requireNonNull(submittedBy, "submittedBy must not be null");
+        this.status = ReviewStatus.SUBMITTED;
+    }
+
     /**
      * 상신 상태의 새 검토를 생성한다.
      */
     public static Review submit(Task task, Integer roundNo, String content, Long submittedBy) {
-        Review review = new Review();
-        review.task = task;
-        review.roundNo = roundNo;
-        review.status = ReviewStatus.SUBMITTED;
-        review.content = content;
-        review.submittedBy = submittedBy;
-        return review;
+        return new Review(task, roundNo, content, submittedBy);
     }
 
     /**
@@ -214,7 +217,21 @@ public class Review {
      * 검토 본문을 갱신한다.
      */
     public void updateContent(String content) {
-        this.content = content;
+        this.content = validateContent(content);
+    }
+
+    private static Integer validateRoundNo(Integer roundNo) {
+        if (roundNo == null || roundNo < 1) {
+            throw new IllegalArgumentException("roundNo must be greater than 0");
+        }
+        return roundNo;
+    }
+
+    private static String validateContent(String content) {
+        if (content == null || content.isBlank()) {
+            throw new IllegalArgumentException("content must not be blank");
+        }
+        return content;
     }
 
     /**
