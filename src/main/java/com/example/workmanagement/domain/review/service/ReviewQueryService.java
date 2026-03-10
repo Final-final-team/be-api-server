@@ -57,7 +57,7 @@ public class ReviewQueryService {
             throw new ReviewDomainException(ApiErrorCode.TASK_NOT_FOUND);
         }
 
-        return reviewRepository.findAllByTask_IdOrderByRoundNoDesc(taskId)
+        return reviewRepository.findAllByTaskIdOrderByRoundNoDesc(taskId)
                 .stream()
                 .map(reviewResultMapper::toSummary)
                 .toList();

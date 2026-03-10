@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component;
 public class ReviewResultMapper {
 
     /**
-     * 검토와 하위 엔티티를 상세 응답 DTO로 변환한다.
+     * 검토와 하위 엔티티를 상세 결과 모델로 변환한다.
      */
     public ReviewDetailResult toDetail(
             Review review,
@@ -27,7 +27,7 @@ public class ReviewResultMapper {
     ) {
         return new ReviewDetailResult(
                 review.getId(),
-                review.getTask().getId(),
+                review.getTaskId(),
                 review.getRoundNo(),
                 review.getStatus(),
                 review.getContent(),
@@ -80,12 +80,12 @@ public class ReviewResultMapper {
     }
 
     /**
-     * 검토를 목록 응답 DTO로 변환한다.
+     * 검토를 목록 결과 모델로 변환한다.
      */
     public ReviewSummaryResult toSummary(Review review) {
         return new ReviewSummaryResult(
                 review.getId(),
-                review.getTask().getId(),
+                review.getTaskId(),
                 review.getRoundNo(),
                 review.getStatus(),
                 review.getLockVersion(),
@@ -95,7 +95,7 @@ public class ReviewResultMapper {
     }
 
     /**
-     * 감사 로그를 응답 DTO로 변환한다.
+     * 감사 로그를 결과 모델로 변환한다.
      */
     public ReviewHistoryResult toHistory(ReviewHistory history) {
         return new ReviewHistoryResult(

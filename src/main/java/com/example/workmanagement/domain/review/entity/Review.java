@@ -1,19 +1,15 @@
 package com.example.workmanagement.domain.review.entity;
 
 import com.example.workmanagement.domain.review.enums.ReviewStatus;
-import com.example.workmanagement.domain.task.entity.Task;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Lob;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import java.time.Instant;
@@ -32,10 +28,9 @@ public class Review {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** 검토 대상 업무 */
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "task_id", nullable = false)
-    private Task task;
+    /** 검토 대상 업무 식별자 */
+    @Column(name = "task_id", nullable = false)
+    private Long taskId;
 
     /** 동일 업무 내 검토 라운드 번호 */
     @Column(name = "round_no", nullable = false)
@@ -93,8 +88,8 @@ public class Review {
     protected Review() {
     }
 
-    private Review(Task task, Integer roundNo, String content, Long submittedBy) {
-        this.task = Objects.requireNonNull(task, "task must not be null");
+    private Review(Long taskId, Integer roundNo, String content, Long submittedBy) {
+        this.taskId = Objects.requireNonNull(taskId, "taskId must not be null");
         this.roundNo = validateRoundNo(roundNo);
         this.content = validateContent(content);
         this.submittedBy = Objects.requireNonNull(submittedBy, "submittedBy must not be null");
@@ -104,8 +99,8 @@ public class Review {
     /**
      * 상신 상태의 새 검토를 생성한다.
      */
-    public static Review submit(Task task, Integer roundNo, String content, Long submittedBy) {
-        return new Review(task, roundNo, content, submittedBy);
+    public static Review submit(Long taskId, Integer roundNo, String content, Long submittedBy) {
+        return new Review(taskId, roundNo, content, submittedBy);
     }
 
     /**
@@ -116,10 +111,10 @@ public class Review {
     }
 
     /**
-     * 연결된 업무를 반환한다.
+     * 연결된 업무 식별자를 반환한다.
      */
-    public Task getTask() {
-        return task;
+    public Long getTaskId() {
+        return taskId;
     }
 
     /**

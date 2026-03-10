@@ -106,19 +106,19 @@ public class ReviewCommandService {
             throw new ReviewDomainException(ApiErrorCode.REVIEW_SUBMIT_FORBIDDEN);
         }
 
-        if (reviewRepository.existsByTask_IdAndStatus(taskId, ReviewStatus.SUBMITTED)) {
+        if (reviewRepository.existsByTaskIdAndStatus(taskId, ReviewStatus.SUBMITTED)) {
             throw new ReviewDomainException(ApiErrorCode.REVIEW_ALREADY_SUBMITTED_FOR_TASK_VERSION);
         }
 
-        boolean hasRejectedReview = reviewRepository.findAllByTask_IdOrderByRoundNoDesc(taskId)
+        boolean hasRejectedReview = reviewRepository.findAllByTaskIdOrderByRoundNoDesc(taskId)
                 .stream()
                 .anyMatch(review -> review.getStatus() == ReviewStatus.REJECTED);
-        int nextRoundNo = reviewRepository.findFirstByTask_IdOrderByRoundNoDesc(taskId)
+        int nextRoundNo = reviewRepository.findFirstByTaskIdOrderByRoundNoDesc(taskId)
                 .map(review -> review.getRoundNo() + 1)
                 .orElse(1);
 
         task.markInReview();
-        Review review = reviewRepository.save(Review.submit(task, nextRoundNo, command.content(), actor.actorId()));
+        Review review = reviewRepository.save(Review.submit(taskId, nextRoundNo, command.content(), actor.actorId()));
         syncInitialReferences(review, command.referenceUserIds(), actor.actorId());
         syncInitialAttachments(review, command.attachments(), actor.actorId());
 
@@ -172,9 +172,10 @@ public class ReviewCommandService {
                 ApiErrorCode.REVIEW_APPROVAL_FORBIDDEN
         );
         validateLockVersion(review, lockVersion);
+        Task task = loadTask(review.getTaskId());
 
         review.approve(actor.actorId(), Instant.now());
-        review.getTask().markCompleted();
+        task.markCompleted();
         recordHistory(
                 review,
                 ReviewHistoryActionType.REVIEW_APPROVED,
@@ -182,7 +183,7 @@ public class ReviewCommandService {
                 review.getId(),
                 actor.actorId(),
                 null,
-                Map.of("taskId", review.getTask().getId())
+                Map.of("taskId", review.getTaskId())
         );
 
         return buildReviewDetail(review);
@@ -204,13 +205,14 @@ public class ReviewCommandService {
                 ApiErrorCode.REVIEW_REJECTION_FORBIDDEN
         );
         validateLockVersion(review, lockVersion);
+        Task task = loadTask(review.getTaskId());
 
         if (command.reason() == null || command.reason().isBlank()) {
             throw new ReviewDomainException(ApiErrorCode.REJECTION_REASON_REQUIRED);
         }
 
         review.reject(actor.actorId(), command.reason(), Instant.now());
-        review.getTask().markInProgress();
+        task.markInProgress();
         recordHistory(
                 review,
                 ReviewHistoryActionType.REVIEW_REJECTED,
@@ -218,7 +220,7 @@ public class ReviewCommandService {
                 review.getId(),
                 actor.actorId(),
                 command.reason(),
-                Map.of("taskId", review.getTask().getId())
+                Map.of("taskId", review.getTaskId())
         );
 
         return buildReviewDetail(review);
@@ -240,9 +242,10 @@ public class ReviewCommandService {
                 ApiErrorCode.REVIEW_CANCEL_FORBIDDEN
         );
         validateLockVersion(review, lockVersion);
+        Task task = loadTask(review.getTaskId());
 
         review.cancel(actor.actorId(), Instant.now());
-        review.getTask().markInProgress();
+        task.markInProgress();
         recordHistory(
                 review,
                 ReviewHistoryActionType.REVIEW_CANCELLED,
@@ -250,7 +253,7 @@ public class ReviewCommandService {
                 review.getId(),
                 actor.actorId(),
                 command.reason(),
-                Map.of("taskId", review.getTask().getId())
+                Map.of("taskId", review.getTaskId())
         );
 
         return buildReviewDetail(review);
