@@ -69,16 +69,11 @@ public class ReviewComment {
     protected ReviewComment() {
     }
 
-    /**
-     * 새 검토 코멘트를 생성한다.
-     */
-    public static ReviewComment create(Review review, Long authorId, String content) {
-        ReviewComment comment = new ReviewComment();
-        comment.review = review;
-        comment.authorId = authorId;
-        comment.content = content;
-        comment.edited = false;
-        return comment;
+    public ReviewComment(Review review, Long authorId, String content) {
+        this.review = review;
+        this.authorId = authorId;
+        this.content = content;
+        this.edited = false;
     }
 
     /**

@@ -497,7 +497,7 @@ public class ReviewCommandService {
         }
 
         assertAllowed(canCreateComment(review, actor), ApiErrorCode.COMMENT_CREATE_FORBIDDEN);
-        ReviewComment comment = reviewCommentRepository.save(ReviewComment.create(review, actor.actorId(), command.content()));
+        ReviewComment comment = reviewCommentRepository.save(new ReviewComment(review, actor.actorId(), command.content()));
         recordHistory(
                 review,
                 ReviewHistoryActionType.COMMENT_CREATED,
