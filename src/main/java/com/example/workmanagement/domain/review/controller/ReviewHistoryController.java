@@ -1,7 +1,7 @@
 package com.example.workmanagement.domain.review.controller;
 
-import com.example.workmanagement.domain.review.dto.ReviewHistoryResponse;
 import com.example.workmanagement.domain.review.service.ReviewQueryService;
+import com.example.workmanagement.domain.review.service.result.ReviewHistoryResult;
 import com.example.workmanagement.global.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -29,7 +29,7 @@ public class ReviewHistoryController {
      */
     @GetMapping
     @Operation(summary = "검토 이력 조회", description = "검토와 관련된 감사 로그 이력을 조회합니다.")
-    public ResponseEntity<ApiResponse<List<ReviewHistoryResponse>>> getReviewHistories(
+    public ResponseEntity<ApiResponse<List<ReviewHistoryResult>>> getReviewHistories(
             @Parameter(description = "조회할 검토 ID", example = "10")
             @PathVariable Long reviewId
     ) {

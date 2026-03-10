@@ -4,9 +4,9 @@ import com.example.workmanagement.domain.review.authorization.ActorContext;
 import com.example.workmanagement.domain.review.authorization.ActorContextResolver;
 import com.example.workmanagement.domain.review.dto.ReviewAttachmentConfirmRequest;
 import com.example.workmanagement.domain.review.dto.ReviewAttachmentPresignRequest;
-import com.example.workmanagement.domain.review.dto.ReviewAttachmentPresignResponse;
-import com.example.workmanagement.domain.review.dto.ReviewDetailResponse;
 import com.example.workmanagement.domain.review.service.ReviewCommandService;
+import com.example.workmanagement.domain.review.service.result.ReviewAttachmentPresignResult;
+import com.example.workmanagement.domain.review.service.result.ReviewDetailResult;
 import com.example.workmanagement.global.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -29,13 +29,16 @@ public class ReviewAttachmentController {
 
     private final ReviewCommandService reviewCommandService;
     private final ActorContextResolver actorContextResolver;
+    private final ReviewDtoMapper reviewDtoMapper;
 
     public ReviewAttachmentController(
             ReviewCommandService reviewCommandService,
-            ActorContextResolver actorContextResolver
+            ActorContextResolver actorContextResolver,
+            ReviewDtoMapper reviewDtoMapper
     ) {
         this.reviewCommandService = reviewCommandService;
         this.actorContextResolver = actorContextResolver;
+        this.reviewDtoMapper = reviewDtoMapper;
     }
 
     /**
@@ -43,7 +46,7 @@ public class ReviewAttachmentController {
      */
     @PostMapping("/presign")
     @Operation(summary = "첨부 업로드 URL 발급", description = "검토 첨부 파일 업로드를 위한 presigned URL을 발급합니다.")
-    public ResponseEntity<ApiResponse<ReviewAttachmentPresignResponse>> createPresignUrl(
+    public ResponseEntity<ApiResponse<ReviewAttachmentPresignResult>> createPresignUrl(
             @Parameter(description = "대상 검토 ID", example = "10")
             @PathVariable Long reviewId,
             @Parameter(description = "낙관적 락 검증용 버전", example = "3")
@@ -60,7 +63,7 @@ public class ReviewAttachmentController {
                         reviewCommandService.createAttachmentPresignUrl(
                                 reviewId,
                                 lockVersion,
-                                request,
+                                reviewDtoMapper.toCreateAttachmentPresignCommand(request),
                                 resolveActor(actorId, roles, permissions)
                         )
                 ));
@@ -71,7 +74,7 @@ public class ReviewAttachmentController {
      */
     @PostMapping
     @Operation(summary = "첨부 등록 확정", description = "업로드가 완료된 첨부 파일을 검토에 반영합니다.")
-    public ResponseEntity<ApiResponse<ReviewDetailResponse>> confirmAttachment(
+    public ResponseEntity<ApiResponse<ReviewDetailResult>> confirmAttachment(
             @Parameter(description = "대상 검토 ID", example = "10")
             @PathVariable Long reviewId,
             @Parameter(description = "낙관적 락 검증용 버전", example = "3")
@@ -82,15 +85,16 @@ public class ReviewAttachmentController {
             @RequestHeader(value = "X-Actor-Permissions", required = false) String permissions,
             @Valid @RequestBody ReviewAttachmentConfirmRequest request
     ) {
+        ReviewDetailResult result = reviewCommandService.confirmAttachment(
+                reviewId,
+                lockVersion,
+                reviewDtoMapper.toConfirmAttachmentCommand(request),
+                resolveActor(actorId, roles, permissions)
+        );
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(
                         "Review attachment confirmed.",
-                        reviewCommandService.confirmAttachment(
-                                reviewId,
-                                lockVersion,
-                                request,
-                                resolveActor(actorId, roles, permissions)
-                        )
+                        result
                 ));
     }
 
@@ -99,7 +103,7 @@ public class ReviewAttachmentController {
      */
     @DeleteMapping("/{attachmentId}")
     @Operation(summary = "첨부 삭제", description = "검토에 등록된 첨부 파일을 삭제합니다.")
-    public ResponseEntity<ApiResponse<ReviewDetailResponse>> deleteAttachment(
+    public ResponseEntity<ApiResponse<ReviewDetailResult>> deleteAttachment(
             @Parameter(description = "대상 검토 ID", example = "10")
             @PathVariable Long reviewId,
             @Parameter(description = "삭제할 첨부 ID", example = "5")
@@ -111,14 +115,15 @@ public class ReviewAttachmentController {
             @RequestHeader(value = "X-Actor-Roles", required = false) String roles,
             @RequestHeader(value = "X-Actor-Permissions", required = false) String permissions
     ) {
+        ReviewDetailResult result = reviewCommandService.deleteAttachment(
+                reviewId,
+                attachmentId,
+                lockVersion,
+                resolveActor(actorId, roles, permissions)
+        );
         return ResponseEntity.ok(ApiResponse.success(
                 "Review attachment deleted.",
-                reviewCommandService.deleteAttachment(
-                        reviewId,
-                        attachmentId,
-                        lockVersion,
-                        resolveActor(actorId, roles, permissions)
-                )
+                result
         ));
     }
 

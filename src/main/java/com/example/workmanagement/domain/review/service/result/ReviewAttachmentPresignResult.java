@@ -1,10 +1,10 @@
-package com.example.workmanagement.domain.review.dto;
+package com.example.workmanagement.domain.review.service.result;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 
 @Schema(description = "첨부 업로드 URL 발급 응답")
-public record ReviewAttachmentPresignResponse(
+public record ReviewAttachmentPresignResult(
         @Schema(description = "업로드 대상 스토리지 객체 키", example = "reviews/10/files/spec.pdf")
         String objectKey,
         @Schema(description = "파일 업로드용 presigned URL")

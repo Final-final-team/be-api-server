@@ -2,18 +2,6 @@ package com.example.workmanagement.domain.review.service;
 
 import com.example.workmanagement.domain.review.authorization.ActorContext;
 import com.example.workmanagement.domain.review.authorization.ReviewAuthorizationPort;
-import com.example.workmanagement.domain.review.dto.ReviewAdditionalReviewerAssignRequest;
-import com.example.workmanagement.domain.review.dto.ReviewAttachmentConfirmRequest;
-import com.example.workmanagement.domain.review.dto.ReviewAttachmentPresignRequest;
-import com.example.workmanagement.domain.review.dto.ReviewAttachmentPresignResponse;
-import com.example.workmanagement.domain.review.dto.ReviewCancelRequest;
-import com.example.workmanagement.domain.review.dto.ReviewCommentCreateRequest;
-import com.example.workmanagement.domain.review.dto.ReviewCommentUpdateRequest;
-import com.example.workmanagement.domain.review.dto.ReviewCreateRequest;
-import com.example.workmanagement.domain.review.dto.ReviewDecisionRequest;
-import com.example.workmanagement.domain.review.dto.ReviewDetailResponse;
-import com.example.workmanagement.domain.review.dto.ReviewReferenceAssignRequest;
-import com.example.workmanagement.domain.review.dto.ReviewUpdateRequest;
 import com.example.workmanagement.domain.review.entity.Review;
 import com.example.workmanagement.domain.review.entity.ReviewAdditionalReviewer;
 import com.example.workmanagement.domain.review.entity.ReviewAttachment;
@@ -30,6 +18,18 @@ import com.example.workmanagement.domain.review.repository.ReviewCommentReposito
 import com.example.workmanagement.domain.review.repository.ReviewHistoryRepository;
 import com.example.workmanagement.domain.review.repository.ReviewReferenceRepository;
 import com.example.workmanagement.domain.review.repository.ReviewRepository;
+import com.example.workmanagement.domain.review.service.command.AssignAdditionalReviewerCommand;
+import com.example.workmanagement.domain.review.service.command.AssignReferenceCommand;
+import com.example.workmanagement.domain.review.service.command.CancelReviewCommand;
+import com.example.workmanagement.domain.review.service.command.ConfirmAttachmentCommand;
+import com.example.workmanagement.domain.review.service.command.CreateAttachmentPresignCommand;
+import com.example.workmanagement.domain.review.service.command.CreateCommentCommand;
+import com.example.workmanagement.domain.review.service.command.RejectReviewCommand;
+import com.example.workmanagement.domain.review.service.command.SubmitReviewCommand;
+import com.example.workmanagement.domain.review.service.command.UpdateCommentCommand;
+import com.example.workmanagement.domain.review.service.command.UpdateReviewCommand;
+import com.example.workmanagement.domain.review.service.result.ReviewAttachmentPresignResult;
+import com.example.workmanagement.domain.review.service.result.ReviewDetailResult;
 import com.example.workmanagement.domain.task.entity.Task;
 import com.example.workmanagement.domain.task.entity.TaskStatus;
 import com.example.workmanagement.domain.task.repository.TaskRepository;
@@ -62,7 +62,7 @@ public class ReviewCommandService {
     private final StoragePresignService storagePresignService;
     private final AuditLogger auditLogger;
     private final ObjectMapper objectMapper;
-    private final ReviewResponseMapper reviewResponseMapper;
+    private final ReviewResultMapper reviewResultMapper;
 
     public ReviewCommandService(
             TaskRepository taskRepository,
@@ -76,7 +76,7 @@ public class ReviewCommandService {
             StoragePresignService storagePresignService,
             AuditLogger auditLogger,
             ObjectMapper objectMapper,
-            ReviewResponseMapper reviewResponseMapper
+            ReviewResultMapper reviewResultMapper
     ) {
         this.taskRepository = taskRepository;
         this.reviewRepository = reviewRepository;
@@ -89,13 +89,13 @@ public class ReviewCommandService {
         this.storagePresignService = storagePresignService;
         this.auditLogger = auditLogger;
         this.objectMapper = objectMapper;
-        this.reviewResponseMapper = reviewResponseMapper;
+        this.reviewResultMapper = reviewResultMapper;
     }
 
     /**
      * 최초 상신 또는 재상신용 검토를 생성한다.
      */
-    public ReviewDetailResponse submitReview(Long taskId, ReviewCreateRequest request, ActorContext actor) {
+    public ReviewDetailResult submitReview(Long taskId, SubmitReviewCommand command, ActorContext actor) {
         Task task = loadTask(taskId);
 
         if (task.getStatus() != TaskStatus.IN_PROGRESS) {
@@ -118,9 +118,9 @@ public class ReviewCommandService {
                 .orElse(1);
 
         task.markInReview();
-        Review review = reviewRepository.save(Review.submit(task, nextRoundNo, request.content(), actor.actorId()));
-        syncInitialReferences(review, request.referenceUserIds(), actor.actorId());
-        syncInitialAttachments(review, request.attachments(), actor.actorId());
+        Review review = reviewRepository.save(Review.submit(task, nextRoundNo, command.content(), actor.actorId()));
+        syncInitialReferences(review, command.referenceUserIds(), actor.actorId());
+        syncInitialAttachments(review, command.attachments(), actor.actorId());
 
         recordHistory(
                 review,
@@ -138,7 +138,7 @@ public class ReviewCommandService {
     /**
      * 제출된 검토의 본문을 수정한다.
      */
-    public ReviewDetailResponse updateReview(Long reviewId, Long lockVersion, ReviewUpdateRequest request, ActorContext actor) {
+    public ReviewDetailResult updateReview(Long reviewId, Long lockVersion, UpdateReviewCommand command, ActorContext actor) {
         Review review = loadReview(reviewId);
         validateSubmittedReview(review, ApiErrorCode.REVIEW_UPDATE_NOT_ALLOWED);
         assertAllowed(
@@ -147,7 +147,7 @@ public class ReviewCommandService {
         );
         validateLockVersion(review, lockVersion);
 
-        review.updateContent(request.content());
+        review.updateContent(command.content());
         recordHistory(
                 review,
                 ReviewHistoryActionType.REVIEW_UPDATED,
@@ -155,7 +155,7 @@ public class ReviewCommandService {
                 review.getId(),
                 actor.actorId(),
                 null,
-                Map.of("contentLength", request.content().length())
+                Map.of("contentLength", command.content().length())
         );
 
         return buildReviewDetail(review);
@@ -164,7 +164,7 @@ public class ReviewCommandService {
     /**
      * 제출된 검토를 승인한다.
      */
-    public ReviewDetailResponse approveReview(Long reviewId, Long lockVersion, ActorContext actor) {
+    public ReviewDetailResult approveReview(Long reviewId, Long lockVersion, ActorContext actor) {
         Review review = loadReview(reviewId);
         validateSubmittedReview(review, ApiErrorCode.REVIEW_APPROVAL_NOT_ALLOWED);
         assertAllowed(
@@ -191,10 +191,10 @@ public class ReviewCommandService {
     /**
      * 제출된 검토를 반려한다.
      */
-    public ReviewDetailResponse rejectReview(
+    public ReviewDetailResult rejectReview(
             Long reviewId,
             Long lockVersion,
-            ReviewDecisionRequest request,
+            RejectReviewCommand command,
             ActorContext actor
     ) {
         Review review = loadReview(reviewId);
@@ -205,11 +205,11 @@ public class ReviewCommandService {
         );
         validateLockVersion(review, lockVersion);
 
-        if (request.reason() == null || request.reason().isBlank()) {
+        if (command.reason() == null || command.reason().isBlank()) {
             throw new ReviewDomainException(ApiErrorCode.REJECTION_REASON_REQUIRED);
         }
 
-        review.reject(actor.actorId(), request.reason(), Instant.now());
+        review.reject(actor.actorId(), command.reason(), Instant.now());
         review.getTask().markInProgress();
         recordHistory(
                 review,
@@ -217,7 +217,7 @@ public class ReviewCommandService {
                 ReviewHistoryTargetType.REVIEW,
                 review.getId(),
                 actor.actorId(),
-                request.reason(),
+                command.reason(),
                 Map.of("taskId", review.getTask().getId())
         );
 
@@ -227,10 +227,10 @@ public class ReviewCommandService {
     /**
      * 제출된 검토를 취소한다.
      */
-    public ReviewDetailResponse cancelReview(
+    public ReviewDetailResult cancelReview(
             Long reviewId,
             Long lockVersion,
-            ReviewCancelRequest request,
+            CancelReviewCommand command,
             ActorContext actor
     ) {
         Review review = loadReview(reviewId);
@@ -249,7 +249,7 @@ public class ReviewCommandService {
                 ReviewHistoryTargetType.REVIEW,
                 review.getId(),
                 actor.actorId(),
-                request.reason(),
+                command.reason(),
                 Map.of("taskId", review.getTask().getId())
         );
 
@@ -259,10 +259,10 @@ public class ReviewCommandService {
     /**
      * 검토 참조자를 추가한다.
      */
-    public ReviewDetailResponse addReference(
+    public ReviewDetailResult addReference(
             Long reviewId,
             Long lockVersion,
-            ReviewReferenceAssignRequest request,
+            AssignReferenceCommand command,
             ActorContext actor
     ) {
         Review review = loadReview(reviewId);
@@ -273,12 +273,12 @@ public class ReviewCommandService {
         );
         validateLockVersion(review, lockVersion);
 
-        if (reviewReferenceRepository.existsByReview_IdAndUserId(reviewId, request.userId())) {
+        if (reviewReferenceRepository.existsByReview_IdAndUserId(reviewId, command.userId())) {
             throw new ReviewDomainException(ApiErrorCode.REFERENCE_ALREADY_ASSIGNED);
         }
 
         ReviewReference reference = reviewReferenceRepository.save(
-                ReviewReference.create(review, request.userId(), actor.actorId())
+                ReviewReference.create(review, command.userId(), actor.actorId())
         );
         recordHistory(
                 review,
@@ -287,7 +287,7 @@ public class ReviewCommandService {
                 reference.getId(),
                 actor.actorId(),
                 null,
-                Map.of("userId", request.userId())
+                Map.of("userId", command.userId())
         );
 
         return buildReviewDetail(review);
@@ -296,7 +296,7 @@ public class ReviewCommandService {
     /**
      * 검토 참조자를 제거한다.
      */
-    public ReviewDetailResponse removeReference(Long reviewId, Long userId, Long lockVersion, ActorContext actor) {
+    public ReviewDetailResult removeReference(Long reviewId, Long userId, Long lockVersion, ActorContext actor) {
         Review review = loadReview(reviewId);
         validateSubmittedReview(review, ApiErrorCode.REFERENCE_UNASSIGN_NOT_ALLOWED);
         assertAllowed(
@@ -324,10 +324,10 @@ public class ReviewCommandService {
     /**
      * 첨부 업로드용 presigned URL 응답을 생성한다.
      */
-    public ReviewAttachmentPresignResponse createAttachmentPresignUrl(
+    public ReviewAttachmentPresignResult createAttachmentPresignUrl(
             Long reviewId,
             Long lockVersion,
-            ReviewAttachmentPresignRequest request,
+            CreateAttachmentPresignCommand command,
             ActorContext actor
     ) {
         Review review = loadReview(reviewId);
@@ -339,11 +339,11 @@ public class ReviewCommandService {
         validateLockVersion(review, lockVersion);
 
         StoragePresignResult presignResult = storagePresignService.createUploadUrl(
-                request.originalName(),
-                request.contentType(),
-                request.sizeBytes()
+                command.originalName(),
+                command.contentType(),
+                command.sizeBytes()
         );
-        return new ReviewAttachmentPresignResponse(
+        return new ReviewAttachmentPresignResult(
                 presignResult.objectKey(),
                 presignResult.uploadUrl(),
                 presignResult.expiresAt()
@@ -353,10 +353,10 @@ public class ReviewCommandService {
     /**
      * 업로드가 끝난 첨부를 검토에 연결한다.
      */
-    public ReviewDetailResponse confirmAttachment(
+    public ReviewDetailResult confirmAttachment(
             Long reviewId,
             Long lockVersion,
-            ReviewAttachmentConfirmRequest request,
+            ConfirmAttachmentCommand command,
             ActorContext actor
     ) {
         Review review = loadReview(reviewId);
@@ -369,11 +369,11 @@ public class ReviewCommandService {
 
         ReviewAttachment attachment = reviewAttachmentRepository.save(ReviewAttachment.create(
                 review,
-                request.objectKey(),
-                request.originalName(),
-                request.contentType(),
-                request.sizeBytes(),
-                request.sortOrder(),
+                command.objectKey(),
+                command.originalName(),
+                command.contentType(),
+                command.sizeBytes(),
+                command.sortOrder(),
                 actor.actorId()
         ));
         recordHistory(
@@ -383,7 +383,7 @@ public class ReviewCommandService {
                 attachment.getId(),
                 actor.actorId(),
                 null,
-                Map.of("objectKey", request.objectKey())
+                Map.of("objectKey", command.objectKey())
         );
 
         return buildReviewDetail(review);
@@ -392,7 +392,7 @@ public class ReviewCommandService {
     /**
      * 검토 첨부를 제거한다.
      */
-    public ReviewDetailResponse deleteAttachment(Long reviewId, Long attachmentId, Long lockVersion, ActorContext actor) {
+    public ReviewDetailResult deleteAttachment(Long reviewId, Long attachmentId, Long lockVersion, ActorContext actor) {
         Review review = loadReview(reviewId);
         validateSubmittedReview(review, ApiErrorCode.ATTACHMENT_REMOVE_NOT_ALLOWED);
         assertAllowed(
@@ -420,10 +420,10 @@ public class ReviewCommandService {
     /**
      * 검토의 추가 검토자를 할당한다.
      */
-    public ReviewDetailResponse addAdditionalReviewer(
+    public ReviewDetailResult addAdditionalReviewer(
             Long reviewId,
             Long lockVersion,
-            ReviewAdditionalReviewerAssignRequest request,
+            AssignAdditionalReviewerCommand command,
             ActorContext actor
     ) {
         Review review = loadReview(reviewId);
@@ -434,12 +434,12 @@ public class ReviewCommandService {
         );
         validateLockVersion(review, lockVersion);
 
-        if (reviewAdditionalReviewerRepository.existsByReview_IdAndUserId(reviewId, request.userId())) {
+        if (reviewAdditionalReviewerRepository.existsByReview_IdAndUserId(reviewId, command.userId())) {
             throw new ReviewDomainException(ApiErrorCode.ADDITIONAL_REVIEWER_ALREADY_ASSIGNED);
         }
 
         ReviewAdditionalReviewer additionalReviewer = reviewAdditionalReviewerRepository.save(
-                ReviewAdditionalReviewer.create(review, request.userId(), actor.actorId())
+                ReviewAdditionalReviewer.create(review, command.userId(), actor.actorId())
         );
         recordHistory(
                 review,
@@ -448,7 +448,7 @@ public class ReviewCommandService {
                 additionalReviewer.getId(),
                 actor.actorId(),
                 null,
-                Map.of("userId", request.userId())
+                Map.of("userId", command.userId())
         );
 
         return buildReviewDetail(review);
@@ -457,7 +457,7 @@ public class ReviewCommandService {
     /**
      * 검토의 추가 검토자 할당을 해제한다.
      */
-    public ReviewDetailResponse removeAdditionalReviewer(
+    public ReviewDetailResult removeAdditionalReviewer(
             Long reviewId,
             Long userId,
             Long lockVersion,
@@ -490,7 +490,7 @@ public class ReviewCommandService {
     /**
      * 검토 코멘트를 생성한다.
      */
-    public ReviewDetailResponse addComment(Long reviewId, ReviewCommentCreateRequest request, ActorContext actor) {
+    public ReviewDetailResult addComment(Long reviewId, CreateCommentCommand command, ActorContext actor) {
         Review review = loadReview(reviewId);
 
         if (!review.getStatus().allowsNewComment()) {
@@ -498,7 +498,7 @@ public class ReviewCommandService {
         }
 
         assertAllowed(canCreateComment(review, actor), ApiErrorCode.COMMENT_CREATE_FORBIDDEN);
-        ReviewComment comment = reviewCommentRepository.save(ReviewComment.create(review, actor.actorId(), request.content()));
+        ReviewComment comment = reviewCommentRepository.save(ReviewComment.create(review, actor.actorId(), command.content()));
         recordHistory(
                 review,
                 ReviewHistoryActionType.COMMENT_CREATED,
@@ -506,7 +506,7 @@ public class ReviewCommandService {
                 comment.getId(),
                 actor.actorId(),
                 null,
-                Map.of("contentLength", request.content().length())
+                Map.of("contentLength", command.content().length())
         );
 
         return buildReviewDetail(review);
@@ -515,10 +515,10 @@ public class ReviewCommandService {
     /**
      * 검토 코멘트를 수정한다.
      */
-    public ReviewDetailResponse updateComment(
+    public ReviewDetailResult updateComment(
             Long reviewId,
             Long commentId,
-            ReviewCommentUpdateRequest request,
+            UpdateCommentCommand command,
             ActorContext actor
     ) {
         Review review = loadReview(reviewId);
@@ -533,7 +533,7 @@ public class ReviewCommandService {
                 ApiErrorCode.COMMENT_UPDATE_FORBIDDEN
         );
 
-        comment.updateContent(request.content(), Instant.now());
+        comment.updateContent(command.content(), Instant.now());
         recordHistory(
                 review,
                 ReviewHistoryActionType.COMMENT_UPDATED,
@@ -541,7 +541,7 @@ public class ReviewCommandService {
                 comment.getId(),
                 actor.actorId(),
                 null,
-                Map.of("contentLength", request.content().length())
+                Map.of("contentLength", command.content().length())
         );
 
         return buildReviewDetail(review);
@@ -550,7 +550,7 @@ public class ReviewCommandService {
     /**
      * 검토 코멘트를 삭제한다.
      */
-    public ReviewDetailResponse deleteComment(Long reviewId, Long commentId, ActorContext actor) {
+    public ReviewDetailResult deleteComment(Long reviewId, Long commentId, ActorContext actor) {
         Review review = loadReview(reviewId);
 
         if (!review.getStatus().allowsCommentMutation()) {
@@ -698,7 +698,7 @@ public class ReviewCommandService {
     /**
      * 초기 첨부 목록을 생성한다.
      */
-    private void syncInitialAttachments(Review review, List<ReviewCreateRequest.AttachmentDraft> attachments, Long actorId) {
+    private void syncInitialAttachments(Review review, List<SubmitReviewCommand.AttachmentDraft> attachments, Long actorId) {
         if (attachments == null || attachments.isEmpty()) {
             return;
         }
@@ -719,8 +719,8 @@ public class ReviewCommandService {
     /**
      * 최신 검토 스냅샷 응답을 조립한다.
      */
-    private ReviewDetailResponse buildReviewDetail(Review review) {
-        return reviewResponseMapper.toDetail(
+    private ReviewDetailResult buildReviewDetail(Review review) {
+        return reviewResultMapper.toDetail(
                 review,
                 reviewReferenceRepository.findAllByReview_IdOrderByCreatedAtAsc(review.getId()),
                 reviewAdditionalReviewerRepository.findAllByReview_IdOrderByCreatedAtAsc(review.getId()),

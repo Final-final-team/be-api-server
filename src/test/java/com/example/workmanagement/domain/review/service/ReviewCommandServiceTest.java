@@ -5,15 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.workmanagement.domain.review.authorization.ActorContext;
 import com.example.workmanagement.domain.review.authorization.ReviewPermissions;
-import com.example.workmanagement.domain.review.dto.ReviewAdditionalReviewerAssignRequest;
-import com.example.workmanagement.domain.review.dto.ReviewCancelRequest;
-import com.example.workmanagement.domain.review.dto.ReviewCommentCreateRequest;
-import com.example.workmanagement.domain.review.dto.ReviewCommentUpdateRequest;
-import com.example.workmanagement.domain.review.dto.ReviewCreateRequest;
-import com.example.workmanagement.domain.review.dto.ReviewDecisionRequest;
-import com.example.workmanagement.domain.review.dto.ReviewDetailResponse;
-import com.example.workmanagement.domain.review.dto.ReviewReferenceAssignRequest;
-import com.example.workmanagement.domain.review.dto.ReviewUpdateRequest;
 import com.example.workmanagement.domain.review.entity.Review;
 import com.example.workmanagement.domain.review.entity.ReviewAdditionalReviewer;
 import com.example.workmanagement.domain.review.entity.ReviewComment;
@@ -24,6 +15,14 @@ import com.example.workmanagement.domain.review.repository.ReviewAdditionalRevie
 import com.example.workmanagement.domain.review.repository.ReviewCommentRepository;
 import com.example.workmanagement.domain.review.repository.ReviewReferenceRepository;
 import com.example.workmanagement.domain.review.repository.ReviewRepository;
+import com.example.workmanagement.domain.review.service.command.AssignAdditionalReviewerCommand;
+import com.example.workmanagement.domain.review.service.command.AssignReferenceCommand;
+import com.example.workmanagement.domain.review.service.command.CancelReviewCommand;
+import com.example.workmanagement.domain.review.service.command.CreateCommentCommand;
+import com.example.workmanagement.domain.review.service.command.SubmitReviewCommand;
+import com.example.workmanagement.domain.review.service.command.UpdateCommentCommand;
+import com.example.workmanagement.domain.review.service.command.UpdateReviewCommand;
+import com.example.workmanagement.domain.review.service.result.ReviewDetailResult;
 import com.example.workmanagement.domain.task.entity.Task;
 import com.example.workmanagement.domain.task.entity.TaskStatus;
 import com.example.workmanagement.domain.task.repository.TaskRepository;
@@ -64,9 +63,9 @@ class ReviewCommandServiceTest {
     void submitReviewByAuthorChangesTaskAndCreatesSubmittedReview() {
         Task task = taskRepository.saveAndFlush(Task.create(TaskStatus.IN_PROGRESS, 101L));
 
-        ReviewDetailResponse response = reviewCommandService.submitReview(
+        ReviewDetailResult response = reviewCommandService.submitReview(
                 task.getId(),
-                new ReviewCreateRequest("검토 요청 본문", List.of(201L, 202L), List.of()),
+                new SubmitReviewCommand("검토 요청 본문", List.of(201L, 202L), List.of()),
                 actor(101L)
         );
 
@@ -89,7 +88,7 @@ class ReviewCommandServiceTest {
                 ApiErrorCode.REVIEW_SUBMIT_FORBIDDEN,
                 () -> reviewCommandService.submitReview(
                         task.getId(),
-                        new ReviewCreateRequest("검토 요청 본문", List.of(), List.of()),
+                        new SubmitReviewCommand("검토 요청 본문", List.of(), List.of()),
                         actor(999L)
                 )
         );
@@ -107,7 +106,7 @@ class ReviewCommandServiceTest {
                 ApiErrorCode.REVIEW_ALREADY_SUBMITTED_FOR_TASK_VERSION,
                 () -> reviewCommandService.submitReview(
                         task.getId(),
-                        new ReviewCreateRequest("새 검토 요청", List.of(), List.of()),
+                        new SubmitReviewCommand("새 검토 요청", List.of(), List.of()),
                         actor(101L)
                 )
         );
@@ -128,7 +127,7 @@ class ReviewCommandServiceTest {
                 () -> reviewCommandService.updateReview(
                         review.getId(),
                         review.getLockVersion(),
-                        new ReviewUpdateRequest("수정"),
+                        new UpdateReviewCommand("수정"),
                         actor(101L)
                 )
         );
@@ -158,7 +157,7 @@ class ReviewCommandServiceTest {
         Review review = reviewRepository.saveAndFlush(Review.submit(task, 1, "본문", 101L));
         reviewAdditionalReviewerRepository.saveAndFlush(ReviewAdditionalReviewer.create(review, 401L, 101L));
 
-        ReviewDetailResponse response = reviewCommandService.approveReview(review.getId(), review.getLockVersion(), actor(401L));
+        ReviewDetailResult response = reviewCommandService.approveReview(review.getId(), review.getLockVersion(), actor(401L));
 
         Task savedTask = taskRepository.findById(task.getId()).orElseThrow();
         assertThat(response.status()).isEqualTo(ReviewStatus.APPROVED);
@@ -178,15 +177,15 @@ class ReviewCommandServiceTest {
                 () -> reviewCommandService.cancelReview(
                         review.getId(),
                         review.getLockVersion(),
-                        new ReviewCancelRequest("철회"),
+                        new CancelReviewCommand("철회"),
                         actor(999L)
                 )
         );
 
-        ReviewDetailResponse response = reviewCommandService.cancelReview(
+        ReviewDetailResult response = reviewCommandService.cancelReview(
                 review.getId(),
                 review.getLockVersion(),
-                new ReviewCancelRequest("철회"),
+                new CancelReviewCommand("철회"),
                 actor(101L)
         );
 
@@ -209,7 +208,7 @@ class ReviewCommandServiceTest {
                 () -> reviewCommandService.addReference(
                         review.getId(),
                         review.getLockVersion(),
-                        new ReviewReferenceAssignRequest(201L),
+                        new AssignReferenceCommand(201L),
                         actor(101L)
                 )
         );
@@ -229,7 +228,7 @@ class ReviewCommandServiceTest {
                 () -> reviewCommandService.addAdditionalReviewer(
                         review.getId(),
                         review.getLockVersion(),
-                        new ReviewAdditionalReviewerAssignRequest(401L),
+                        new AssignAdditionalReviewerCommand(401L),
                         actor(101L)
                 )
         );
@@ -245,9 +244,9 @@ class ReviewCommandServiceTest {
         review.approve(301L, java.time.Instant.now());
         reviewRepository.flush();
 
-        ReviewDetailResponse created = reviewCommandService.addComment(
+        ReviewDetailResult created = reviewCommandService.addComment(
                 review.getId(),
-                new ReviewCommentCreateRequest("승인 후 코멘트"),
+                new CreateCommentCommand("승인 후 코멘트"),
                 actor(101L)
         );
 
@@ -259,7 +258,7 @@ class ReviewCommandServiceTest {
                 () -> reviewCommandService.updateComment(
                         review.getId(),
                         comment.getId(),
-                        new ReviewCommentUpdateRequest("수정 시도"),
+                        new UpdateCommentCommand("수정 시도"),
                         actor(101L)
                 )
         );
@@ -280,7 +279,7 @@ class ReviewCommandServiceTest {
                 ApiErrorCode.COMMENT_CREATE_NOT_ALLOWED,
                 () -> reviewCommandService.addComment(
                         review.getId(),
-                        new ReviewCommentCreateRequest("새 코멘트"),
+                        new CreateCommentCommand("새 코멘트"),
                         actor(101L)
                 )
         );
@@ -303,7 +302,7 @@ class ReviewCommandServiceTest {
                 () -> reviewCommandService.updateReview(
                         review.getId(),
                         review.getLockVersion() + 1,
-                        new ReviewUpdateRequest("수정"),
+                        new UpdateReviewCommand("수정"),
                         actor(101L)
                 )
         );
@@ -319,9 +318,9 @@ class ReviewCommandServiceTest {
         rejectedReview.reject(301L, "반려", java.time.Instant.now());
         reviewRepository.flush();
 
-        ReviewDetailResponse response = reviewCommandService.submitReview(
+        ReviewDetailResult response = reviewCommandService.submitReview(
                 task.getId(),
-                new ReviewCreateRequest("재상신 본문", List.of(), List.of()),
+                new SubmitReviewCommand("재상신 본문", List.of(), List.of()),
                 actor(101L)
         );
 
@@ -338,9 +337,9 @@ class ReviewCommandServiceTest {
         review.approve(301L, java.time.Instant.now());
         reviewRepository.flush();
 
-        ReviewDetailResponse response = reviewCommandService.addComment(
+        ReviewDetailResult response = reviewCommandService.addComment(
                 review.getId(),
-                new ReviewCommentCreateRequest("검토자 코멘트"),
+                new CreateCommentCommand("검토자 코멘트"),
                 actor(301L, ReviewPermissions.REVIEW_APPROVE)
         );
 

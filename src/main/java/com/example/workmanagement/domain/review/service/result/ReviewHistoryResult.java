@@ -1,4 +1,4 @@
-package com.example.workmanagement.domain.review.dto;
+package com.example.workmanagement.domain.review.service.result;
 
 import com.example.workmanagement.domain.review.enums.ReviewHistoryActionType;
 import com.example.workmanagement.domain.review.enums.ReviewHistoryTargetType;
@@ -6,7 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 
 @Schema(description = "검토 이력 응답")
-public record ReviewHistoryResponse(
+public record ReviewHistoryResult(
         @Schema(description = "이력 ID", example = "12")
         Long historyId,
         @Schema(description = "이력 액션 유형", example = "REVIEW_CREATED")

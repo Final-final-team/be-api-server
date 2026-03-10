@@ -3,8 +3,8 @@ package com.example.workmanagement.domain.review.controller;
 import com.example.workmanagement.domain.review.authorization.ActorContext;
 import com.example.workmanagement.domain.review.authorization.ActorContextResolver;
 import com.example.workmanagement.domain.review.dto.ReviewAdditionalReviewerAssignRequest;
-import com.example.workmanagement.domain.review.dto.ReviewDetailResponse;
 import com.example.workmanagement.domain.review.service.ReviewCommandService;
+import com.example.workmanagement.domain.review.service.result.ReviewDetailResult;
 import com.example.workmanagement.global.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -27,13 +27,16 @@ public class ReviewAdditionalReviewerController {
 
     private final ReviewCommandService reviewCommandService;
     private final ActorContextResolver actorContextResolver;
+    private final ReviewDtoMapper reviewDtoMapper;
 
     public ReviewAdditionalReviewerController(
             ReviewCommandService reviewCommandService,
-            ActorContextResolver actorContextResolver
+            ActorContextResolver actorContextResolver,
+            ReviewDtoMapper reviewDtoMapper
     ) {
         this.reviewCommandService = reviewCommandService;
         this.actorContextResolver = actorContextResolver;
+        this.reviewDtoMapper = reviewDtoMapper;
     }
 
     /**
@@ -41,7 +44,7 @@ public class ReviewAdditionalReviewerController {
      */
     @PostMapping
     @Operation(summary = "추가 검토자 지정", description = "검토에 추가 검토자를 지정합니다.")
-    public ResponseEntity<ApiResponse<ReviewDetailResponse>> addAdditionalReviewer(
+    public ResponseEntity<ApiResponse<ReviewDetailResult>> addAdditionalReviewer(
             @Parameter(description = "대상 검토 ID", example = "10")
             @PathVariable Long reviewId,
             @Parameter(description = "낙관적 락 검증용 버전", example = "3")
@@ -52,15 +55,16 @@ public class ReviewAdditionalReviewerController {
             @RequestHeader(value = "X-Actor-Permissions", required = false) String permissions,
             @Valid @RequestBody ReviewAdditionalReviewerAssignRequest request
     ) {
+        ReviewDetailResult result = reviewCommandService.addAdditionalReviewer(
+                reviewId,
+                lockVersion,
+                reviewDtoMapper.toAssignAdditionalReviewerCommand(request),
+                resolveActor(actorId, roles, permissions)
+        );
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(
                         "Additional reviewer assigned.",
-                        reviewCommandService.addAdditionalReviewer(
-                                reviewId,
-                                lockVersion,
-                                request,
-                                resolveActor(actorId, roles, permissions)
-                        )
+                        result
                 ));
     }
 
@@ -69,7 +73,7 @@ public class ReviewAdditionalReviewerController {
      */
     @DeleteMapping("/{userId}")
     @Operation(summary = "추가 검토자 해제", description = "검토에 지정된 추가 검토자를 제거합니다.")
-    public ResponseEntity<ApiResponse<ReviewDetailResponse>> removeAdditionalReviewer(
+    public ResponseEntity<ApiResponse<ReviewDetailResult>> removeAdditionalReviewer(
             @Parameter(description = "대상 검토 ID", example = "10")
             @PathVariable Long reviewId,
             @Parameter(description = "제거할 사용자 ID", example = "202")
@@ -81,14 +85,15 @@ public class ReviewAdditionalReviewerController {
             @RequestHeader(value = "X-Actor-Roles", required = false) String roles,
             @RequestHeader(value = "X-Actor-Permissions", required = false) String permissions
     ) {
+        ReviewDetailResult result = reviewCommandService.removeAdditionalReviewer(
+                reviewId,
+                userId,
+                lockVersion,
+                resolveActor(actorId, roles, permissions)
+        );
         return ResponseEntity.ok(ApiResponse.success(
                 "Additional reviewer removed.",
-                reviewCommandService.removeAdditionalReviewer(
-                        reviewId,
-                        userId,
-                        lockVersion,
-                        resolveActor(actorId, roles, permissions)
-                )
+                result
         ));
     }
 

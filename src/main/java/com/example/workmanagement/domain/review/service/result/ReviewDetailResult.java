@@ -1,4 +1,4 @@
-package com.example.workmanagement.domain.review.dto;
+package com.example.workmanagement.domain.review.service.result;
 
 import com.example.workmanagement.domain.review.enums.ReviewStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -6,7 +6,7 @@ import java.time.Instant;
 import java.util.List;
 
 @Schema(description = "검토 상세 응답")
-public record ReviewDetailResponse(
+public record ReviewDetailResult(
         @Schema(description = "검토 ID", example = "10")
         Long reviewId,
         @Schema(description = "연결된 업무 ID", example = "1")

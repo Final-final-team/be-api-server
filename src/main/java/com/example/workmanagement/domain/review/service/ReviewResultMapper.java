@@ -1,31 +1,31 @@
 package com.example.workmanagement.domain.review.service;
 
-import com.example.workmanagement.domain.review.dto.ReviewDetailResponse;
-import com.example.workmanagement.domain.review.dto.ReviewHistoryResponse;
-import com.example.workmanagement.domain.review.dto.ReviewSummaryResponse;
 import com.example.workmanagement.domain.review.entity.Review;
 import com.example.workmanagement.domain.review.entity.ReviewAdditionalReviewer;
 import com.example.workmanagement.domain.review.entity.ReviewAttachment;
 import com.example.workmanagement.domain.review.entity.ReviewComment;
 import com.example.workmanagement.domain.review.entity.ReviewHistory;
 import com.example.workmanagement.domain.review.entity.ReviewReference;
+import com.example.workmanagement.domain.review.service.result.ReviewDetailResult;
+import com.example.workmanagement.domain.review.service.result.ReviewHistoryResult;
+import com.example.workmanagement.domain.review.service.result.ReviewSummaryResult;
 import java.util.List;
 import org.springframework.stereotype.Component;
 
 @Component
-public class ReviewResponseMapper {
+public class ReviewResultMapper {
 
     /**
      * 검토와 하위 엔티티를 상세 응답 DTO로 변환한다.
      */
-    public ReviewDetailResponse toDetail(
+    public ReviewDetailResult toDetail(
             Review review,
             List<ReviewReference> references,
             List<ReviewAdditionalReviewer> additionalReviewers,
             List<ReviewAttachment> attachments,
             List<ReviewComment> comments
     ) {
-        return new ReviewDetailResponse(
+        return new ReviewDetailResult(
                 review.getId(),
                 review.getTask().getId(),
                 review.getRoundNo(),
@@ -40,21 +40,21 @@ public class ReviewResponseMapper {
                 review.getDecidedAt(),
                 review.getCancelledAt(),
                 references.stream()
-                        .map(reference -> new ReviewDetailResponse.ReferenceInfo(
+                        .map(reference -> new ReviewDetailResult.ReferenceInfo(
                                 reference.getUserId(),
                                 reference.getAddedBy(),
                                 reference.getCreatedAt()
                         ))
                         .toList(),
                 additionalReviewers.stream()
-                        .map(additionalReviewer -> new ReviewDetailResponse.AdditionalReviewerInfo(
+                        .map(additionalReviewer -> new ReviewDetailResult.AdditionalReviewerInfo(
                                 additionalReviewer.getUserId(),
                                 additionalReviewer.getAssignedBy(),
                                 additionalReviewer.getCreatedAt()
                         ))
                         .toList(),
                 attachments.stream()
-                        .map(attachment -> new ReviewDetailResponse.AttachmentInfo(
+                        .map(attachment -> new ReviewDetailResult.AttachmentInfo(
                                 attachment.getId(),
                                 attachment.getObjectKey(),
                                 attachment.getOriginalName(),
@@ -66,7 +66,7 @@ public class ReviewResponseMapper {
                         .toList(),
                 comments.stream()
                         .filter(comment -> !comment.isDeleted())
-                        .map(comment -> new ReviewDetailResponse.CommentInfo(
+                        .map(comment -> new ReviewDetailResult.CommentInfo(
                                 comment.getId(),
                                 comment.getAuthorId(),
                                 comment.getContent(),
@@ -82,8 +82,8 @@ public class ReviewResponseMapper {
     /**
      * 검토를 목록 응답 DTO로 변환한다.
      */
-    public ReviewSummaryResponse toSummary(Review review) {
-        return new ReviewSummaryResponse(
+    public ReviewSummaryResult toSummary(Review review) {
+        return new ReviewSummaryResult(
                 review.getId(),
                 review.getTask().getId(),
                 review.getRoundNo(),
@@ -97,8 +97,8 @@ public class ReviewResponseMapper {
     /**
      * 감사 로그를 응답 DTO로 변환한다.
      */
-    public ReviewHistoryResponse toHistory(ReviewHistory history) {
-        return new ReviewHistoryResponse(
+    public ReviewHistoryResult toHistory(ReviewHistory history) {
+        return new ReviewHistoryResult(
                 history.getId(),
                 history.getActionType(),
                 history.getTargetType(),
