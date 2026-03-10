@@ -281,7 +281,7 @@ public class ReviewCommandService {
         }
 
         ReviewReference reference = reviewReferenceRepository.save(
-                ReviewReference.create(review, command.userId(), actor.actorId())
+                new ReviewReference(review, command.userId(), actor.actorId())
         );
         recordHistory(
                 review,
@@ -370,7 +370,7 @@ public class ReviewCommandService {
         );
         validateLockVersion(review, lockVersion);
 
-        ReviewAttachment attachment = reviewAttachmentRepository.save(ReviewAttachment.create(
+        ReviewAttachment attachment = reviewAttachmentRepository.save(new ReviewAttachment(
                 review,
                 command.objectKey(),
                 command.originalName(),
@@ -440,7 +440,7 @@ public class ReviewCommandService {
         }
 
         ReviewAdditionalReviewer additionalReviewer = reviewAdditionalReviewerRepository.save(
-                ReviewAdditionalReviewer.create(review, command.userId(), actor.actorId())
+                new ReviewAdditionalReviewer(review, command.userId(), actor.actorId())
         );
         recordHistory(
                 review,
@@ -690,7 +690,7 @@ public class ReviewCommandService {
 
         referenceUserIds.stream()
                 .distinct()
-                .map(userId -> ReviewReference.create(review, userId, actorId))
+                .map(userId -> new ReviewReference(review, userId, actorId))
                 .forEach(reviewReferenceRepository::save);
     }
 
@@ -703,7 +703,7 @@ public class ReviewCommandService {
         }
 
         attachments.stream()
-                .map(attachment -> ReviewAttachment.create(
+                .map(attachment -> new ReviewAttachment(
                         review,
                         attachment.objectKey(),
                         attachment.originalName(),

@@ -12,6 +12,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
+import java.util.Objects;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
@@ -52,15 +53,10 @@ public class ReviewAdditionalReviewer {
     protected ReviewAdditionalReviewer() {
     }
 
-    /**
-     * 새 추가 검토자 할당을 생성한다.
-     */
-    public static ReviewAdditionalReviewer create(Review review, Long userId, Long assignedBy) {
-        ReviewAdditionalReviewer additionalReviewer = new ReviewAdditionalReviewer();
-        additionalReviewer.review = review;
-        additionalReviewer.userId = userId;
-        additionalReviewer.assignedBy = assignedBy;
-        return additionalReviewer;
+    public ReviewAdditionalReviewer(Review review, Long userId, Long assignedBy) {
+        this.review = Objects.requireNonNull(review, "review must not be null");
+        this.userId = Objects.requireNonNull(userId, "userId must not be null");
+        this.assignedBy = Objects.requireNonNull(assignedBy, "assignedBy must not be null");
     }
 
     /**

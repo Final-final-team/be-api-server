@@ -12,6 +12,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
+import java.util.Objects;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
@@ -52,15 +53,10 @@ public class ReviewReference {
     protected ReviewReference() {
     }
 
-    /**
-     * 새 검토 참조자를 생성한다.
-     */
-    public static ReviewReference create(Review review, Long userId, Long addedBy) {
-        ReviewReference reference = new ReviewReference();
-        reference.review = review;
-        reference.userId = userId;
-        reference.addedBy = addedBy;
-        return reference;
+    public ReviewReference(Review review, Long userId, Long addedBy) {
+        this.review = Objects.requireNonNull(review, "review must not be null");
+        this.userId = Objects.requireNonNull(userId, "userId must not be null");
+        this.addedBy = Objects.requireNonNull(addedBy, "addedBy must not be null");
     }
 
     /**

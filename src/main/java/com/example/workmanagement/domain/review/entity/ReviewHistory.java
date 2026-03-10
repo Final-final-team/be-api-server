@@ -14,6 +14,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.Objects;
 
 @Entity
 @Table(name = "review_histories")
@@ -62,6 +63,26 @@ public class ReviewHistory {
     protected ReviewHistory() {
     }
 
+    private ReviewHistory(
+            Review review,
+            ReviewHistoryActionType actionType,
+            Long actorId,
+            String reason,
+            ReviewHistoryTargetType targetType,
+            Long targetId,
+            String metadataJson,
+            Instant occurredAt
+    ) {
+        this.review = Objects.requireNonNull(review, "review must not be null");
+        this.actionType = Objects.requireNonNull(actionType, "actionType must not be null");
+        this.actorId = Objects.requireNonNull(actorId, "actorId must not be null");
+        this.reason = reason;
+        this.targetType = Objects.requireNonNull(targetType, "targetType must not be null");
+        this.targetId = Objects.requireNonNull(targetId, "targetId must not be null");
+        this.metadataJson = metadataJson;
+        this.occurredAt = Objects.requireNonNull(occurredAt, "occurredAt must not be null");
+    }
+
     /**
      * 새 감사 로그를 생성한다.
      */
@@ -75,16 +96,16 @@ public class ReviewHistory {
             String metadataJson,
             Instant occurredAt
     ) {
-        ReviewHistory history = new ReviewHistory();
-        history.review = review;
-        history.actionType = actionType;
-        history.actorId = actorId;
-        history.reason = reason;
-        history.targetType = targetType;
-        history.targetId = targetId;
-        history.metadataJson = metadataJson;
-        history.occurredAt = occurredAt;
-        return history;
+        return new ReviewHistory(
+                review,
+                actionType,
+                actorId,
+                reason,
+                targetType,
+                targetId,
+                metadataJson,
+                occurredAt
+        );
     }
 
     /**

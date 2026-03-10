@@ -11,6 +11,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.Objects;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
@@ -61,10 +62,7 @@ public class ReviewAttachment {
     protected ReviewAttachment() {
     }
 
-    /**
-     * 새 검토 첨부를 생성한다.
-     */
-    public static ReviewAttachment create(
+    public ReviewAttachment(
             Review review,
             String objectKey,
             String originalName,
@@ -73,15 +71,13 @@ public class ReviewAttachment {
             Integer sortOrder,
             Long uploadedBy
     ) {
-        ReviewAttachment attachment = new ReviewAttachment();
-        attachment.review = review;
-        attachment.objectKey = objectKey;
-        attachment.originalName = originalName;
-        attachment.contentType = contentType;
-        attachment.sizeBytes = sizeBytes;
-        attachment.sortOrder = sortOrder;
-        attachment.uploadedBy = uploadedBy;
-        return attachment;
+        this.review = Objects.requireNonNull(review, "review must not be null");
+        this.objectKey = Objects.requireNonNull(objectKey, "objectKey must not be null");
+        this.originalName = Objects.requireNonNull(originalName, "originalName must not be null");
+        this.contentType = contentType;
+        this.sizeBytes = Objects.requireNonNull(sizeBytes, "sizeBytes must not be null");
+        this.sortOrder = Objects.requireNonNull(sortOrder, "sortOrder must not be null");
+        this.uploadedBy = Objects.requireNonNull(uploadedBy, "uploadedBy must not be null");
     }
 
     /**
