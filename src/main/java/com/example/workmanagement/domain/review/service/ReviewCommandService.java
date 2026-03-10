@@ -422,7 +422,6 @@ public class ReviewCommandService {
      */
     public ReviewDetailResult addAdditionalReviewer(
             Long reviewId,
-            Long lockVersion,
             AssignAdditionalReviewerCommand command,
             ActorContext actor
     ) {
@@ -432,7 +431,6 @@ public class ReviewCommandService {
                 reviewAuthorizationPort.canManageAdditionalReviewers(review, actor) || isSubmitter(review, actor),
                 ApiErrorCode.ADDITIONAL_REVIEWER_ASSIGN_FORBIDDEN
         );
-        validateLockVersion(review, lockVersion);
 
         if (reviewAdditionalReviewerRepository.existsByReview_IdAndUserId(reviewId, command.userId())) {
             throw new ReviewDomainException(ApiErrorCode.ADDITIONAL_REVIEWER_ALREADY_ASSIGNED);
@@ -460,7 +458,6 @@ public class ReviewCommandService {
     public ReviewDetailResult removeAdditionalReviewer(
             Long reviewId,
             Long userId,
-            Long lockVersion,
             ActorContext actor
     ) {
         Review review = loadReview(reviewId);
@@ -469,7 +466,6 @@ public class ReviewCommandService {
                 reviewAuthorizationPort.canManageAdditionalReviewers(review, actor) || isSubmitter(review, actor),
                 ApiErrorCode.ADDITIONAL_REVIEWER_UNASSIGN_FORBIDDEN
         );
-        validateLockVersion(review, lockVersion);
 
         ReviewAdditionalReviewer additionalReviewer = reviewAdditionalReviewerRepository.findByReview_IdAndUserId(reviewId, userId)
                 .orElseThrow(() -> new ReviewDomainException(ApiErrorCode.REVIEW_ADDITIONAL_REVIEWER_NOT_FOUND));

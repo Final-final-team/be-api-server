@@ -47,8 +47,6 @@ public class ReviewAdditionalReviewerController {
     public ResponseEntity<ApiResponse<ReviewDetailResult>> addAdditionalReviewer(
             @Parameter(description = "대상 검토 ID", example = "10")
             @PathVariable Long reviewId,
-            @Parameter(description = "낙관적 락 검증용 버전", example = "3")
-            @RequestHeader("If-Match") Long lockVersion,
             @Parameter(description = "요청자 사용자 ID", example = "201")
             @RequestHeader("X-Actor-Id") String actorId,
             @RequestHeader(value = "X-Actor-Roles", required = false) String roles,
@@ -57,7 +55,6 @@ public class ReviewAdditionalReviewerController {
     ) {
         ReviewDetailResult result = reviewCommandService.addAdditionalReviewer(
                 reviewId,
-                lockVersion,
                 reviewDtoMapper.toAssignAdditionalReviewerCommand(request),
                 resolveActor(actorId, roles, permissions)
         );
@@ -78,8 +75,6 @@ public class ReviewAdditionalReviewerController {
             @PathVariable Long reviewId,
             @Parameter(description = "제거할 사용자 ID", example = "202")
             @PathVariable Long userId,
-            @Parameter(description = "낙관적 락 검증용 버전", example = "3")
-            @RequestHeader("If-Match") Long lockVersion,
             @Parameter(description = "요청자 사용자 ID", example = "201")
             @RequestHeader("X-Actor-Id") String actorId,
             @RequestHeader(value = "X-Actor-Roles", required = false) String roles,
@@ -88,7 +83,6 @@ public class ReviewAdditionalReviewerController {
         ReviewDetailResult result = reviewCommandService.removeAdditionalReviewer(
                 reviewId,
                 userId,
-                lockVersion,
                 resolveActor(actorId, roles, permissions)
         );
         return ResponseEntity.ok(ApiResponse.success(

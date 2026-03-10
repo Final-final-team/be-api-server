@@ -227,7 +227,6 @@ class ReviewCommandServiceTest {
                 ApiErrorCode.ADDITIONAL_REVIEWER_ALREADY_ASSIGNED,
                 () -> reviewCommandService.addAdditionalReviewer(
                         review.getId(),
-                        review.getLockVersion(),
                         new AssignAdditionalReviewerCommand(401L),
                         actor(101L)
                 )
