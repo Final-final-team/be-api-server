@@ -51,6 +51,23 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * 애플리케이션 내부 검증 실패를 요청 오류 응답으로 변환한다.
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(
+            IllegalArgumentException exception,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(ApiErrorCode.VALIDATION_ERROR.getHttpStatus())
+                .body(new ErrorResponse(
+                        ApiErrorCode.VALIDATION_ERROR.name(),
+                        exception.getMessage(),
+                        Instant.now(),
+                        request.getRequestURI()
+                ));
+    }
+
+    /**
      * 처리되지 않은 예외를 공통 서버 오류 응답으로 변환한다.
      */
     @ExceptionHandler(Exception.class)

@@ -55,7 +55,7 @@ public class Review {
     private Long submittedBy;
 
     /** 승인 또는 반려 처리자 식별자 */
-    @Column(name = "decided_by")
+    @Column
     private Long decidedBy;
 
     /** 승인 또는 반려 처리 시각 */
@@ -63,7 +63,7 @@ public class Review {
     private Instant decidedAt;
 
     /** 취소 처리자 식별자 */
-    @Column(name = "cancelled_by")
+    @Column
     private Long cancelledBy;
 
     /** 취소 처리 시각 */
@@ -229,6 +229,16 @@ public class Review {
         return content;
     }
 
+    private static String validateRejectionReason(String reason) {
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException("rejectionReason must not be blank");
+        }
+        if (reason.length() > 2000) {
+            throw new IllegalArgumentException("rejectionReason must not exceed 2000 characters");
+        }
+        return reason;
+    }
+
     /**
      * 검토를 승인 상태로 전환한다.
      */
@@ -246,7 +256,7 @@ public class Review {
         this.status = ReviewStatus.REJECTED;
         this.decidedBy = actorId;
         this.decidedAt = decidedAt;
-        this.rejectionReason = reason;
+        this.rejectionReason = validateRejectionReason(reason);
     }
 
     /**

@@ -1,5 +1,4 @@
 package com.example.workmanagement.domain.review.service;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -19,6 +18,7 @@ import com.example.workmanagement.domain.review.service.command.AssignAdditional
 import com.example.workmanagement.domain.review.service.command.AssignReferenceCommand;
 import com.example.workmanagement.domain.review.service.command.CancelReviewCommand;
 import com.example.workmanagement.domain.review.service.command.CreateCommentCommand;
+import com.example.workmanagement.domain.review.service.command.RejectReviewCommand;
 import com.example.workmanagement.domain.review.service.command.SubmitReviewCommand;
 import com.example.workmanagement.domain.review.service.command.UpdateCommentCommand;
 import com.example.workmanagement.domain.review.service.command.UpdateReviewCommand;
@@ -343,6 +343,24 @@ class ReviewCommandServiceTest {
         );
 
         assertThat(response.comments()).hasSize(1);
+    }
+
+    /**
+     * 반려 사유 길이 제한은 서비스 경로가 DTO를 우회해도 최종 검증되어야 한다.
+     */
+    @Test
+    void rejectReviewFailsWhenReasonExceedsLimit() {
+        Task task = taskRepository.saveAndFlush(Task.create(TaskStatus.IN_REVIEW, 101L));
+        Review review = reviewRepository.saveAndFlush(Review.submit(task.getId(), 1, "본문", 101L));
+        String tooLongReason = "a".repeat(2001);
+
+        assertThatThrownBy(() -> reviewCommandService.rejectReview(
+                review.getId(),
+                review.getLockVersion(),
+                new RejectReviewCommand(tooLongReason),
+                actor(301L, ReviewPermissions.REVIEW_REJECT)
+        )).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("rejectionReason must not exceed");
     }
 
     /**
