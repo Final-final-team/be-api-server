@@ -6,6 +6,7 @@ public record ApiResponse<T>(
         T data,
         ErrorInfo errorInfo
 ) {
+
     public record ErrorInfo(
             String code,
             String message

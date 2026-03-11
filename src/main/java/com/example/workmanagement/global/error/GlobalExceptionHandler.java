@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
     // ----- domain exception handler
 
     @ResponseBody
