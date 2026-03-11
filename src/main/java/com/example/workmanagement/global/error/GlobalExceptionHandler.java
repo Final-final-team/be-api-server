@@ -15,8 +15,8 @@ public class GlobalExceptionHandler {
     /**
      * 도메인 예외를 표준 에러 응답으로 변환한다.
      */
-    @ExceptionHandler(ApiException.class)
-    public ResponseEntity<ErrorResponse> handleApiException(ApiException exception, HttpServletRequest request) {
+    @ExceptionHandler(DomainException.class)
+    public ResponseEntity<ErrorResponse> handleApiException(DomainException exception, HttpServletRequest request) {
         ApiErrorCode errorCode = exception.getErrorCode();
         return ResponseEntity.status(errorCode.getHttpStatus())
                 .body(new ErrorResponse(
