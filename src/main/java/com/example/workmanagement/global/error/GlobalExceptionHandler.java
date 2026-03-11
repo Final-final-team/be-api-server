@@ -1,7 +1,6 @@
 package com.example.workmanagement.global.error;
 
 import com.example.workmanagement.global.response.ApiResponse;
-import com.example.workmanagement.global.response.ErrorResponse;
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import com.fasterxml.jackson.databind.exc.InvalidNullException;
 import com.fasterxml.jackson.databind.exc.MismatchedInputException;
