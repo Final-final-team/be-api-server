@@ -2,14 +2,14 @@ package com.example.workmanagement.global.error;
 
 public class DomainException extends RuntimeException {
 
-    private final ApiErrorCode errorCode;
+    private final ErrorCode errorCode;
 
-    protected DomainException(ApiErrorCode errorCode, String message) {
+    protected DomainException(ErrorCode errorCode, String message) {
         super(message);
         this.errorCode = errorCode;
     }
 
-    public ApiErrorCode getErrorCode() {
+    public ErrorCode errorCode() {
         return errorCode;
     }
 }

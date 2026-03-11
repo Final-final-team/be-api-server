@@ -3,7 +3,7 @@ package com.example.workmanagement.global.error;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 
-public enum CommonErrorCode implements ApiErrorCode {
+public enum CommonErrorCode implements ErrorCode {
 
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "C-0001", "내부 서버 에러")
     ;
