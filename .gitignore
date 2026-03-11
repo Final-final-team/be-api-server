@@ -38,4 +38,4 @@ out/
 
 ### custom ###
 .env
-monitoring
+monitoring/logs
