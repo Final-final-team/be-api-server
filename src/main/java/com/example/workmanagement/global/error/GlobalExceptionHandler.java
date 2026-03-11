@@ -1,5 +1,6 @@
 package com.example.workmanagement.global.error;
 
+import com.example.workmanagement.global.log.LogConstants;
 import com.example.workmanagement.global.response.ApiResponse;
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import com.fasterxml.jackson.databind.exc.InvalidNullException;
@@ -249,6 +250,8 @@ public class GlobalExceptionHandler {
         ErrorCode errorCode = CommonErrorCode.UNEXPECTED_DATABASE_ERROR;
         String errorMessage = errorCode.message();
 
+        setAttributeForLogging(req, e, errorCode, errorMessage);
+
         ApiResponse<Void> body = ApiResponse.error(errorCode.code(), errorMessage);
         return ResponseEntity.status(errorCode.httpStatus()).body(body);
     }
@@ -262,6 +265,8 @@ public class GlobalExceptionHandler {
         ErrorCode errorCode = CommonErrorCode.UNEXPECTED_SERVER_ERROR;
         String errorMessage = errorCode.message();
 
+        setAttributeForLogging(req, e, errorCode, errorMessage);
+
         ApiResponse<Void> body = ApiResponse.error(errorCode.code(), errorMessage);
         return ResponseEntity.status(errorCode.httpStatus()).body(body);
     }
@@ -271,7 +276,15 @@ public class GlobalExceptionHandler {
     private ResponseEntity<ApiResponse<Void>> setAttributeAndGetResponseEntity(
             HttpServletRequest req, Exception e, ErrorCode errorCode, String errorMessage) {
 
+        setAttributeForLogging(req, e, errorCode, errorMessage);
+
         ApiResponse<Void> body = ApiResponse.error(errorCode.code(), errorMessage);
         return ResponseEntity.status(errorCode.httpStatus()).body(body);
+    }
+
+    private void setAttributeForLogging(HttpServletRequest req, Exception e, ErrorCode errorCode, String errorMessage) {
+        req.setAttribute(LogConstants.ATTR_NAME_CAUGHT_EXCEPTION, e);
+        req.setAttribute(LogConstants.ATTR_NAME_ERR_CODE, errorCode);
+        req.setAttribute(LogConstants.ATTR_NAME_ERR_MSG, errorMessage);
     }
 }
