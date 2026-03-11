@@ -8,12 +8,18 @@ spring:
     hikari:
       initialization-fail-timeout: -1
   jpa:
+    # open-in-view: false 설정 이유를 따로 정리해야 할 것 같음
     open-in-view: false
     hibernate:
-      ddl-auto: none
+      ddl-auto: ${JPA_DDL_AUTO:update}
     properties:
       hibernate:
         format_sql: true
+        use_sql_comments: true
         jdbc:
           time_zone: UTC
 
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
