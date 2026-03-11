@@ -1,25 +1,30 @@
 package com.example.workmanagement.global.response;
 
-import java.time.Instant;
+import com.example.workmanagement.global.error.ErrorCode;
 
 public record ApiResponse<T>(
-        boolean success,
-        String code,
-        String message,
         T data,
-        Instant timestamp
+        ErrorInfo errorInfo
 ) {
-    /**
-     * 데이터가 포함된 성공 응답을 생성한다.
-     */
-    public static <T> ApiResponse<T> success(String message, T data) {
-        return new ApiResponse<>(true, "SUCCESS", message, data, Instant.now());
+    public record ErrorInfo(
+            String code,
+            String message
+    ) {
     }
 
-    /**
-     * 데이터가 없는 성공 응답을 생성한다.
-     */
-    public static ApiResponse<Void> success(String message) {
-        return new ApiResponse<>(true, "SUCCESS", message, null, Instant.now());
+    public static <T> ApiResponse<T> success(T data) {
+        return new ApiResponse<>(data, null);
+    }
+
+    public static <T> ApiResponse<T> noContent() {
+        return new ApiResponse<>(null, null);
+    }
+
+    public static ApiResponse<Void> error(String code, String message) {
+        return new ApiResponse<>(null, new ErrorInfo(code, message));
+    }
+
+    public static ApiResponse<Void> error(ErrorCode errorCode) {
+        return new ApiResponse<>(null, new ErrorInfo(errorCode.code(), errorCode.message()));
     }
 }
