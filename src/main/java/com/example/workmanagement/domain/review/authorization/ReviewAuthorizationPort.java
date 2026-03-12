@@ -2,7 +2,6 @@ package com.example.workmanagement.domain.review.authorization;
 
 import com.example.workmanagement.domain.review.entity.Review;
 import com.example.workmanagement.domain.review.entity.ReviewComment;
-import com.example.workmanagement.domain.task.entity.Task;
 
 public interface ReviewAuthorizationPort {
 
