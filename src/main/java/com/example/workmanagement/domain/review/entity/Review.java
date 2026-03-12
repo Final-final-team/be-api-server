@@ -1,6 +1,8 @@
 package com.example.workmanagement.domain.review.entity;
 
 import com.example.workmanagement.domain.review.enums.ReviewStatus;
+import com.example.workmanagement.domain.review.exception.ReviewDomainException;
+import com.example.workmanagement.domain.review.error.ReviewErrorCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -98,7 +100,7 @@ public class Review {
 
     /**
      * 상신 상태의 새 검토를 생성한다.
-     */
+     */ //taskId 존재 여부 검증 로직 task 도메인 추가되면 추가 예정
     public static Review submit(Long taskId, Integer roundNo, String content, Long submittedBy) {
         return new Review(taskId, roundNo, content, submittedBy);
     }
@@ -212,29 +214,33 @@ public class Review {
      * 검토 본문을 갱신한다.
      */
     public void updateContent(String content) {
+        ensureSubmitted(ReviewErrorCode.REVIEW_UPDATE_NOT_ALLOWED);
         this.content = validateContent(content);
     }
 
     private static Integer validateRoundNo(Integer roundNo) {
         if (roundNo == null || roundNo < 1) {
-            throw new IllegalArgumentException("roundNo must be greater than 0");
+            throw new ReviewDomainException(ReviewErrorCode.REVIEW_VALIDATION_ERROR, "roundNo must be greater than 0");
         }
         return roundNo;
     }
 
     private static String validateContent(String content) {
         if (content == null || content.isBlank()) {
-            throw new IllegalArgumentException("content must not be blank");
+            throw new ReviewDomainException(ReviewErrorCode.REVIEW_VALIDATION_ERROR, "content must not be blank");
+        }
+        if (content.length() > 10000) {
+            throw new ReviewDomainException(ReviewErrorCode.REVIEW_CONTENT_TOO_LONG);
         }
         return content;
     }
 
     private static String validateRejectionReason(String reason) {
         if (reason == null || reason.isBlank()) {
-            throw new IllegalArgumentException("rejectionReason must not be blank");
+            throw new ReviewDomainException(ReviewErrorCode.REJECTION_REASON_REQUIRED);
         }
         if (reason.length() > 2000) {
-            throw new IllegalArgumentException("rejectionReason must not exceed 2000 characters");
+            throw new ReviewDomainException(ReviewErrorCode.REVIEW_REJECTION_REASON_TOO_LONG);
         }
         return reason;
     }
@@ -243,6 +249,7 @@ public class Review {
      * 검토를 승인 상태로 전환한다.
      */
     public void approve(Long actorId, Instant decidedAt) {
+        ensureSubmitted(ReviewErrorCode.REVIEW_APPROVAL_NOT_ALLOWED);
         this.status = ReviewStatus.APPROVED;
         this.decidedBy = actorId;
         this.decidedAt = decidedAt;
@@ -253,6 +260,7 @@ public class Review {
      * 검토를 반려 상태로 전환한다.
      */
     public void reject(Long actorId, String reason, Instant decidedAt) {
+        ensureSubmitted(ReviewErrorCode.REVIEW_REJECTION_NOT_ALLOWED);
         this.status = ReviewStatus.REJECTED;
         this.decidedBy = actorId;
         this.decidedAt = decidedAt;
@@ -263,8 +271,15 @@ public class Review {
      * 검토를 취소 상태로 전환한다.
      */
     public void cancel(Long actorId, Instant cancelledAt) {
+        ensureSubmitted(ReviewErrorCode.REVIEW_CANCEL_NOT_ALLOWED);
         this.status = ReviewStatus.CANCELLED;
         this.cancelledBy = actorId;
         this.cancelledAt = cancelledAt;
+    }
+
+    private void ensureSubmitted(ReviewErrorCode errorCode) {
+        if (!isSubmitted()) {
+            throw new ReviewDomainException(errorCode);
+        }
     }
 }

@@ -33,23 +33,54 @@ import com.example.workmanagement.domain.review.service.result.ReviewDetailResul
 import com.example.workmanagement.domain.task.entity.Task;
 import com.example.workmanagement.domain.task.entity.TaskStatus;
 import com.example.workmanagement.domain.task.repository.TaskRepository;
-import com.example.workmanagement.global.error.ApiErrorCode;
+import com.example.workmanagement.domain.review.error.ReviewErrorCode;
 import com.example.workmanagement.infrastructure.audit.AuditLogger;
 import com.example.workmanagement.infrastructure.storage.StoragePresignResult;
 import com.example.workmanagement.infrastructure.storage.StoragePresignService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
 public class ReviewCommandService {
+
+    private static final int MAX_REFERENCE_COUNT = 50;
+    private static final int MAX_ADDITIONAL_REVIEWER_COUNT = 20;
+    private static final int MAX_ATTACHMENT_COUNT = 10;
+    private static final long MAX_ATTACHMENT_SIZE_BYTES = 20L * 1024 * 1024;
+    private static final long MAX_TOTAL_ATTACHMENT_SIZE_BYTES = 100L * 1024 * 1024;
+    private static final Set<String> ALLOWED_ATTACHMENT_EXTENSIONS = new LinkedHashSet<>(Arrays.asList(
+            "txt", "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "hwp", "hwpx", "md",
+            "jpg", "jpeg", "png", "gif", "webp"
+    ));
+    private static final Set<String> ALLOWED_ATTACHMENT_CONTENT_TYPES = new LinkedHashSet<>(Arrays.asList(
+            "text/plain",
+            "text/markdown",
+            "application/pdf",
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/vnd.ms-excel",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/vnd.ms-powerpoint",
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            "application/x-hwp",
+            "application/haansofthwp",
+            "application/hwp+zip",
+            "image/jpeg",
+            "image/png",
+            "image/gif",
+            "image/webp"
+    ));
 
     private final TaskRepository taskRepository;
     private final ReviewRepository reviewRepository;
@@ -99,15 +130,15 @@ public class ReviewCommandService {
         Task task = loadTask(taskId);
 
         if (task.getStatus() != TaskStatus.IN_PROGRESS) {
-            throw new ReviewDomainException(ApiErrorCode.REVIEW_SUBMIT_NOT_ALLOWED);
+            throw new ReviewDomainException(ReviewErrorCode.REVIEW_SUBMIT_NOT_ALLOWED);
         }
 
         if (!reviewAuthorizationPort.canSubmit(task, actor) && !isTaskAuthor(task, actor)) {
-            throw new ReviewDomainException(ApiErrorCode.REVIEW_SUBMIT_FORBIDDEN);
+            throw new ReviewDomainException(ReviewErrorCode.REVIEW_SUBMIT_FORBIDDEN);
         }
 
         if (reviewRepository.existsByTaskIdAndStatus(taskId, ReviewStatus.SUBMITTED)) {
-            throw new ReviewDomainException(ApiErrorCode.REVIEW_ALREADY_SUBMITTED_FOR_TASK_VERSION);
+            throw new ReviewDomainException(ReviewErrorCode.REVIEW_ALREADY_SUBMITTED_FOR_TASK_VERSION);
         }
 
         boolean hasRejectedReview = reviewRepository.findAllByTaskIdOrderByRoundNoDesc(taskId)
@@ -116,6 +147,9 @@ public class ReviewCommandService {
         int nextRoundNo = reviewRepository.findFirstByTaskIdOrderByRoundNoDesc(taskId)
                 .map(review -> review.getRoundNo() + 1)
                 .orElse(1);
+
+        validateInitialReferenceCount(command.referenceUserIds());
+        validateAttachmentDrafts(command.attachments());
 
         task.markInReview();
         Review review = reviewRepository.save(Review.submit(taskId, nextRoundNo, command.content(), actor.actorId()));
@@ -140,10 +174,10 @@ public class ReviewCommandService {
      */
     public ReviewDetailResult updateReview(Long reviewId, Long lockVersion, UpdateReviewCommand command, ActorContext actor) {
         Review review = loadReview(reviewId);
-        validateSubmittedReview(review, ApiErrorCode.REVIEW_UPDATE_NOT_ALLOWED);
+        validateSubmittedReview(review, ReviewErrorCode.REVIEW_UPDATE_NOT_ALLOWED);
         assertAllowed(
                 reviewAuthorizationPort.canUpdate(review, actor) || isSubmitter(review, actor),
-                ApiErrorCode.REVIEW_UPDATE_FORBIDDEN
+                ReviewErrorCode.REVIEW_UPDATE_FORBIDDEN
         );
         validateLockVersion(review, lockVersion);
 
@@ -166,10 +200,10 @@ public class ReviewCommandService {
      */
     public ReviewDetailResult approveReview(Long reviewId, Long lockVersion, ActorContext actor) {
         Review review = loadReview(reviewId);
-        validateSubmittedReview(review, ApiErrorCode.REVIEW_APPROVAL_NOT_ALLOWED);
+        validateSubmittedReview(review, ReviewErrorCode.REVIEW_APPROVAL_NOT_ALLOWED);
         assertAllowed(
                 reviewAuthorizationPort.canApprove(review, actor) || isAdditionalReviewer(review, actor.actorId()),
-                ApiErrorCode.REVIEW_APPROVAL_FORBIDDEN
+                ReviewErrorCode.REVIEW_APPROVAL_FORBIDDEN
         );
         validateLockVersion(review, lockVersion);
         Task task = loadTask(review.getTaskId());
@@ -199,16 +233,16 @@ public class ReviewCommandService {
             ActorContext actor
     ) {
         Review review = loadReview(reviewId);
-        validateSubmittedReview(review, ApiErrorCode.REVIEW_REJECTION_NOT_ALLOWED);
+        validateSubmittedReview(review, ReviewErrorCode.REVIEW_REJECTION_NOT_ALLOWED);
         assertAllowed(
                 reviewAuthorizationPort.canReject(review, actor) || isAdditionalReviewer(review, actor.actorId()),
-                ApiErrorCode.REVIEW_REJECTION_FORBIDDEN
+                ReviewErrorCode.REVIEW_REJECTION_FORBIDDEN
         );
         validateLockVersion(review, lockVersion);
         Task task = loadTask(review.getTaskId());
 
         if (command.reason() == null || command.reason().isBlank()) {
-            throw new ReviewDomainException(ApiErrorCode.REJECTION_REASON_REQUIRED);
+            throw new ReviewDomainException(ReviewErrorCode.REJECTION_REASON_REQUIRED);
         }
 
         review.reject(actor.actorId(), command.reason(), Instant.now());
@@ -236,10 +270,10 @@ public class ReviewCommandService {
             ActorContext actor
     ) {
         Review review = loadReview(reviewId);
-        validateSubmittedReview(review, ApiErrorCode.REVIEW_CANCEL_NOT_ALLOWED);
+        validateSubmittedReview(review, ReviewErrorCode.REVIEW_CANCEL_NOT_ALLOWED);
         assertAllowed(
                 reviewAuthorizationPort.canCancel(review, actor) || isSubmitter(review, actor),
-                ApiErrorCode.REVIEW_CANCEL_FORBIDDEN
+                ReviewErrorCode.REVIEW_CANCEL_FORBIDDEN
         );
         validateLockVersion(review, lockVersion);
         Task task = loadTask(review.getTaskId());
@@ -269,16 +303,18 @@ public class ReviewCommandService {
             ActorContext actor
     ) {
         Review review = loadReview(reviewId);
-        validateSubmittedReview(review, ApiErrorCode.REFERENCE_ASSIGN_NOT_ALLOWED);
+        validateSubmittedReview(review, ReviewErrorCode.REFERENCE_ASSIGN_NOT_ALLOWED);
         assertAllowed(
                 reviewAuthorizationPort.canManageReferences(review, actor) || isSubmitter(review, actor),
-                ApiErrorCode.REFERENCE_ASSIGN_FORBIDDEN
+                ReviewErrorCode.REFERENCE_ASSIGN_FORBIDDEN
         );
         validateLockVersion(review, lockVersion);
+        validateReferenceCapacity(reviewId);
 
         if (reviewReferenceRepository.existsByReview_IdAndUserId(reviewId, command.userId())) {
-            throw new ReviewDomainException(ApiErrorCode.REFERENCE_ALREADY_ASSIGNED);
+            throw new ReviewDomainException(ReviewErrorCode.REFERENCE_ALREADY_ASSIGNED);
         }
+        validateReferenceEligibility(review, command.userId());
 
         ReviewReference reference = reviewReferenceRepository.save(
                 new ReviewReference(review, command.userId(), actor.actorId())
@@ -290,7 +326,10 @@ public class ReviewCommandService {
                 reference.getId(),
                 actor.actorId(),
                 null,
-                Map.of("userId", command.userId())
+                Map.of(
+                        "userId", command.userId(),
+                        "referenceId", reference.getId()
+                )
         );
 
         return buildReviewDetail(review);
@@ -301,15 +340,15 @@ public class ReviewCommandService {
      */
     public ReviewDetailResult removeReference(Long reviewId, Long userId, Long lockVersion, ActorContext actor) {
         Review review = loadReview(reviewId);
-        validateSubmittedReview(review, ApiErrorCode.REFERENCE_UNASSIGN_NOT_ALLOWED);
+        validateSubmittedReview(review, ReviewErrorCode.REFERENCE_UNASSIGN_NOT_ALLOWED);
         assertAllowed(
                 reviewAuthorizationPort.canManageReferences(review, actor) || isSubmitter(review, actor),
-                ApiErrorCode.REFERENCE_UNASSIGN_FORBIDDEN
+                ReviewErrorCode.REFERENCE_UNASSIGN_FORBIDDEN
         );
         validateLockVersion(review, lockVersion);
 
         ReviewReference reference = reviewReferenceRepository.findByReview_IdAndUserId(reviewId, userId)
-                .orElseThrow(() -> new ReviewDomainException(ApiErrorCode.REVIEW_REFERENCE_NOT_FOUND));
+                .orElseThrow(() -> new ReviewDomainException(ReviewErrorCode.REVIEW_REFERENCE_NOT_FOUND));
         reviewReferenceRepository.delete(reference);
         recordHistory(
                 review,
@@ -318,7 +357,10 @@ public class ReviewCommandService {
                 reference.getId(),
                 actor.actorId(),
                 null,
-                Map.of("userId", userId)
+                Map.of(
+                        "userId", userId,
+                        "referenceId", reference.getId()
+                )
         );
 
         return buildReviewDetail(review);
@@ -334,12 +376,14 @@ public class ReviewCommandService {
             ActorContext actor
     ) {
         Review review = loadReview(reviewId);
-        validateSubmittedReview(review, ApiErrorCode.ATTACHMENT_ADD_NOT_ALLOWED);
+        validateSubmittedReview(review, ReviewErrorCode.ATTACHMENT_ADD_NOT_ALLOWED);
         assertAllowed(
-                reviewAuthorizationPort.canManageAttachments(review, actor) || isSubmitter(review, actor),
-                ApiErrorCode.ATTACHMENT_ADD_FORBIDDEN
+                isSubmitter(review, actor),
+                ReviewErrorCode.ATTACHMENT_ADD_FORBIDDEN
         );
         validateLockVersion(review, lockVersion);
+        validateAttachmentRequest(command.originalName(), command.contentType(), command.sizeBytes());
+        validateAttachmentCapacity(reviewId, command.sizeBytes());
 
         StoragePresignResult presignResult = storagePresignService.createUploadUrl(
                 command.originalName(),
@@ -363,12 +407,14 @@ public class ReviewCommandService {
             ActorContext actor
     ) {
         Review review = loadReview(reviewId);
-        validateSubmittedReview(review, ApiErrorCode.ATTACHMENT_ADD_NOT_ALLOWED);
+        validateSubmittedReview(review, ReviewErrorCode.ATTACHMENT_ADD_NOT_ALLOWED);
         assertAllowed(
-                reviewAuthorizationPort.canManageAttachments(review, actor) || isSubmitter(review, actor),
-                ApiErrorCode.ATTACHMENT_ADD_FORBIDDEN
+                isSubmitter(review, actor),
+                ReviewErrorCode.ATTACHMENT_ADD_FORBIDDEN
         );
         validateLockVersion(review, lockVersion);
+        validateAttachmentRequest(command.originalName(), command.contentType(), command.sizeBytes());
+        validateAttachmentCapacity(reviewId, command.sizeBytes());
 
         ReviewAttachment attachment = reviewAttachmentRepository.save(new ReviewAttachment(
                 review,
@@ -386,7 +432,11 @@ public class ReviewCommandService {
                 attachment.getId(),
                 actor.actorId(),
                 null,
-                Map.of("objectKey", command.objectKey())
+                Map.of(
+                        "attachmentId", attachment.getId(),
+                        "objectKey", attachment.getObjectKey(),
+                        "originalName", attachment.getOriginalName()
+                )
         );
 
         return buildReviewDetail(review);
@@ -397,15 +447,15 @@ public class ReviewCommandService {
      */
     public ReviewDetailResult deleteAttachment(Long reviewId, Long attachmentId, Long lockVersion, ActorContext actor) {
         Review review = loadReview(reviewId);
-        validateSubmittedReview(review, ApiErrorCode.ATTACHMENT_REMOVE_NOT_ALLOWED);
+        validateSubmittedReview(review, ReviewErrorCode.ATTACHMENT_REMOVE_NOT_ALLOWED);
         assertAllowed(
-                reviewAuthorizationPort.canManageAttachments(review, actor) || isSubmitter(review, actor),
-                ApiErrorCode.ATTACHMENT_REMOVE_FORBIDDEN
+                isSubmitter(review, actor),
+                ReviewErrorCode.ATTACHMENT_REMOVE_FORBIDDEN
         );
         validateLockVersion(review, lockVersion);
 
         ReviewAttachment attachment = reviewAttachmentRepository.findByIdAndReview_Id(attachmentId, reviewId)
-                .orElseThrow(() -> new ReviewDomainException(ApiErrorCode.REVIEW_ATTACHMENT_NOT_FOUND));
+                .orElseThrow(() -> new ReviewDomainException(ReviewErrorCode.REVIEW_ATTACHMENT_NOT_FOUND));
         reviewAttachmentRepository.delete(attachment);
         recordHistory(
                 review,
@@ -414,7 +464,11 @@ public class ReviewCommandService {
                 attachment.getId(),
                 actor.actorId(),
                 null,
-                Map.of("objectKey", attachment.getObjectKey())
+                Map.of(
+                        "attachmentId", attachment.getId(),
+                        "objectKey", attachment.getObjectKey(),
+                        "originalName", attachment.getOriginalName()
+                )
         );
 
         return buildReviewDetail(review);
@@ -429,15 +483,17 @@ public class ReviewCommandService {
             ActorContext actor
     ) {
         Review review = loadReview(reviewId);
-        validateSubmittedReview(review, ApiErrorCode.ADDITIONAL_REVIEWER_ASSIGN_NOT_ALLOWED);
+        validateSubmittedReview(review, ReviewErrorCode.ADDITIONAL_REVIEWER_ASSIGN_NOT_ALLOWED);
         assertAllowed(
-                reviewAuthorizationPort.canManageAdditionalReviewers(review, actor) || isSubmitter(review, actor),
-                ApiErrorCode.ADDITIONAL_REVIEWER_ASSIGN_FORBIDDEN
+                isSubmitter(review, actor),
+                ReviewErrorCode.ADDITIONAL_REVIEWER_ASSIGN_FORBIDDEN
         );
+        validateAdditionalReviewerCapacity(reviewId);
 
         if (reviewAdditionalReviewerRepository.existsByReview_IdAndUserId(reviewId, command.userId())) {
-            throw new ReviewDomainException(ApiErrorCode.ADDITIONAL_REVIEWER_ALREADY_ASSIGNED);
+            throw new ReviewDomainException(ReviewErrorCode.ADDITIONAL_REVIEWER_ALREADY_ASSIGNED);
         }
+        validateAdditionalReviewerEligibility(review, command.userId());
 
         ReviewAdditionalReviewer additionalReviewer = reviewAdditionalReviewerRepository.save(
                 new ReviewAdditionalReviewer(review, command.userId(), actor.actorId())
@@ -449,7 +505,10 @@ public class ReviewCommandService {
                 additionalReviewer.getId(),
                 actor.actorId(),
                 null,
-                Map.of("userId", command.userId())
+                Map.of(
+                        "userId", command.userId(),
+                        "additionalReviewerId", additionalReviewer.getId()
+                )
         );
 
         return buildReviewDetail(review);
@@ -464,14 +523,14 @@ public class ReviewCommandService {
             ActorContext actor
     ) {
         Review review = loadReview(reviewId);
-        validateSubmittedReview(review, ApiErrorCode.ADDITIONAL_REVIEWER_UNASSIGN_NOT_ALLOWED);
+        validateSubmittedReview(review, ReviewErrorCode.ADDITIONAL_REVIEWER_UNASSIGN_NOT_ALLOWED);
         assertAllowed(
-                reviewAuthorizationPort.canManageAdditionalReviewers(review, actor) || isSubmitter(review, actor),
-                ApiErrorCode.ADDITIONAL_REVIEWER_UNASSIGN_FORBIDDEN
+                isSubmitter(review, actor),
+                ReviewErrorCode.ADDITIONAL_REVIEWER_UNASSIGN_FORBIDDEN
         );
 
         ReviewAdditionalReviewer additionalReviewer = reviewAdditionalReviewerRepository.findByReview_IdAndUserId(reviewId, userId)
-                .orElseThrow(() -> new ReviewDomainException(ApiErrorCode.REVIEW_ADDITIONAL_REVIEWER_NOT_FOUND));
+                .orElseThrow(() -> new ReviewDomainException(ReviewErrorCode.REVIEW_ADDITIONAL_REVIEWER_NOT_FOUND));
         reviewAdditionalReviewerRepository.delete(additionalReviewer);
         recordHistory(
                 review,
@@ -480,7 +539,10 @@ public class ReviewCommandService {
                 additionalReviewer.getId(),
                 actor.actorId(),
                 null,
-                Map.of("userId", userId)
+                Map.of(
+                        "userId", userId,
+                        "additionalReviewerId", additionalReviewer.getId()
+                )
         );
 
         return buildReviewDetail(review);
@@ -493,10 +555,10 @@ public class ReviewCommandService {
         Review review = loadReview(reviewId);
 
         if (!review.getStatus().allowsNewComment()) {
-            throw new ReviewDomainException(ApiErrorCode.COMMENT_CREATE_NOT_ALLOWED);
+            throw new ReviewDomainException(ReviewErrorCode.COMMENT_CREATE_NOT_ALLOWED);
         }
 
-        assertAllowed(canCreateComment(review, actor), ApiErrorCode.COMMENT_CREATE_FORBIDDEN);
+        assertAllowed(canCreateComment(review, actor), ReviewErrorCode.COMMENT_CREATE_FORBIDDEN);
         ReviewComment comment = reviewCommentRepository.save(new ReviewComment(review, actor.actorId(), command.content()));
         recordHistory(
                 review,
@@ -505,7 +567,10 @@ public class ReviewCommandService {
                 comment.getId(),
                 actor.actorId(),
                 null,
-                Map.of("contentLength", command.content().length())
+                Map.of(
+                        "commentId", comment.getId(),
+                        "contentLength", command.content().length()
+                )
         );
 
         return buildReviewDetail(review);
@@ -523,13 +588,13 @@ public class ReviewCommandService {
         Review review = loadReview(reviewId);
 
         if (!review.getStatus().allowsCommentMutation()) {
-            throw new ReviewDomainException(ApiErrorCode.COMMENT_UPDATE_NOT_ALLOWED);
+            throw new ReviewDomainException(ReviewErrorCode.COMMENT_UPDATE_NOT_ALLOWED);
         }
 
         ReviewComment comment = loadComment(reviewId, commentId);
         assertAllowed(
-                reviewAuthorizationPort.canUpdateComment(review, comment, actor) || isCommentAuthor(comment, actor),
-                ApiErrorCode.COMMENT_UPDATE_FORBIDDEN
+                actor.isAdminOverride() || isCommentAuthor(comment, actor),
+                ReviewErrorCode.COMMENT_UPDATE_FORBIDDEN
         );
 
         comment.updateContent(command.content(), Instant.now());
@@ -540,7 +605,10 @@ public class ReviewCommandService {
                 comment.getId(),
                 actor.actorId(),
                 null,
-                Map.of("contentLength", command.content().length())
+                Map.of(
+                        "commentId", comment.getId(),
+                        "contentLength", command.content().length()
+                )
         );
 
         return buildReviewDetail(review);
@@ -553,16 +621,17 @@ public class ReviewCommandService {
         Review review = loadReview(reviewId);
 
         if (!review.getStatus().allowsCommentMutation()) {
-            throw new ReviewDomainException(ApiErrorCode.COMMENT_DELETE_NOT_ALLOWED);
+            throw new ReviewDomainException(ReviewErrorCode.COMMENT_DELETE_NOT_ALLOWED);
         }
 
         ReviewComment comment = loadComment(reviewId, commentId);
         assertAllowed(
-                reviewAuthorizationPort.canDeleteComment(review, comment, actor) || isCommentAuthor(comment, actor),
-                ApiErrorCode.COMMENT_DELETE_FORBIDDEN
+                actor.isAdminOverride() || isCommentAuthor(comment, actor),
+                ReviewErrorCode.COMMENT_DELETE_FORBIDDEN
         );
 
-        comment.delete(actor.actorId(), Instant.now());
+        Instant deletedAt = Instant.now();
+        comment.delete(actor.actorId(), deletedAt);
         recordHistory(
                 review,
                 ReviewHistoryActionType.COMMENT_DELETED,
@@ -570,7 +639,12 @@ public class ReviewCommandService {
                 comment.getId(),
                 actor.actorId(),
                 null,
-                Map.of("deleted", true)
+                Map.of(
+                        "commentId", comment.getId(),
+                        "commentAuthorId", comment.getAuthorId(),
+                        "deletedBy", actor.actorId(),
+                        "deletedAt", deletedAt.toString()
+                )
         );
 
         return buildReviewDetail(review);
@@ -581,7 +655,7 @@ public class ReviewCommandService {
      */
     private Task loadTask(Long taskId) {
         return taskRepository.findById(taskId)
-                .orElseThrow(() -> new ReviewDomainException(ApiErrorCode.TASK_NOT_FOUND));
+                .orElseThrow(() -> new ReviewDomainException(ReviewErrorCode.TASK_NOT_FOUND));
     }
 
     /**
@@ -589,7 +663,7 @@ public class ReviewCommandService {
      */
     private Review loadReview(Long reviewId) {
         return reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new ReviewDomainException(ApiErrorCode.REVIEW_NOT_FOUND));
+                .orElseThrow(() -> new ReviewDomainException(ReviewErrorCode.REVIEW_NOT_FOUND));
     }
 
     /**
@@ -597,10 +671,10 @@ public class ReviewCommandService {
      */
     private ReviewComment loadComment(Long reviewId, Long commentId) {
         ReviewComment comment = reviewCommentRepository.findByIdAndReview_Id(commentId, reviewId)
-                .orElseThrow(() -> new ReviewDomainException(ApiErrorCode.REVIEW_COMMENT_NOT_FOUND));
+                .orElseThrow(() -> new ReviewDomainException(ReviewErrorCode.REVIEW_COMMENT_NOT_FOUND));
 
         if (comment.isDeleted()) {
-            throw new ReviewDomainException(ApiErrorCode.REVIEW_COMMENT_NOT_FOUND);
+            throw new ReviewDomainException(ReviewErrorCode.REVIEW_COMMENT_NOT_FOUND);
         }
 
         return comment;
@@ -609,7 +683,7 @@ public class ReviewCommandService {
     /**
      * 제출 상태에서만 가능한 액션인지 검증한다.
      */
-    private void validateSubmittedReview(Review review, ApiErrorCode errorCode) {
+    private void validateSubmittedReview(Review review, ReviewErrorCode errorCode) {
         if (!review.isSubmitted()) {
             throw new ReviewDomainException(errorCode);
         }
@@ -620,14 +694,14 @@ public class ReviewCommandService {
      */
     private void validateLockVersion(Review review, Long lockVersion) {
         if (!Objects.equals(review.getLockVersion(), lockVersion)) {
-            throw new ReviewDomainException(ApiErrorCode.REVIEW_VERSION_CONFLICT);
+            throw new ReviewDomainException(ReviewErrorCode.REVIEW_VERSION_CONFLICT);
         }
     }
 
     /**
      * 조건이 거짓이면 지정된 에러 코드로 예외를 발생시킨다.
      */
-    private void assertAllowed(boolean condition, ApiErrorCode errorCode) {
+    private void assertAllowed(boolean condition, ReviewErrorCode errorCode) {
         if (!condition) {
             throw new ReviewDomainException(errorCode);
         }
@@ -672,8 +746,7 @@ public class ReviewCommandService {
      * 코멘트 작성 권한과 검토별 예외 허용 조건을 함께 검증한다.
      */
     private boolean canCreateComment(Review review, ActorContext actor) {
-        return reviewAuthorizationPort.canCreateComment(review, actor)
-                || isSubmitter(review, actor)
+        return isSubmitter(review, actor)
                 || isReference(review, actor.actorId())
                 || reviewAuthorizationPort.canApprove(review, actor)
                 || reviewAuthorizationPort.canReject(review, actor)
@@ -690,6 +763,7 @@ public class ReviewCommandService {
 
         referenceUserIds.stream()
                 .distinct()
+                .peek(userId -> validateReferenceEligibility(review, userId))
                 .map(userId -> new ReviewReference(review, userId, actorId))
                 .forEach(reviewReferenceRepository::save);
     }
@@ -713,6 +787,127 @@ public class ReviewCommandService {
                         actorId
                 ))
                 .forEach(reviewAttachmentRepository::save);
+    }
+
+    private void validateInitialReferenceCount(List<Long> referenceUserIds) {
+        if (referenceUserIds == null || referenceUserIds.isEmpty()) {
+            return;
+        }
+        long distinctCount = referenceUserIds.stream().distinct().count();
+        if (distinctCount > MAX_REFERENCE_COUNT) {
+            throw new ReviewDomainException(ReviewErrorCode.REFERENCE_LIMIT_EXCEEDED);
+        }
+    }
+
+    private void validateReferenceCapacity(Long reviewId) {
+        if (reviewReferenceRepository.countByReview_Id(reviewId) >= MAX_REFERENCE_COUNT) {
+            throw new ReviewDomainException(ReviewErrorCode.REFERENCE_LIMIT_EXCEEDED);
+        }
+    }
+
+    private void validateReferenceEligibility(Review review, Long userId) {
+        if (Objects.equals(review.getSubmittedBy(), userId)) {
+            throw new ReviewDomainException(
+                    ReviewErrorCode.REFERENCE_ASSIGN_NOT_ALLOWED,
+                    "The submitter cannot be assigned as a reference."
+            );
+        }
+        if (reviewAdditionalReviewerRepository.existsByReview_IdAndUserId(review.getId(), userId)) {
+            throw new ReviewDomainException(
+                    ReviewErrorCode.REFERENCE_ASSIGN_NOT_ALLOWED,
+                    "An additional reviewer cannot be assigned as a reference."
+            );
+        }
+    }
+
+    private void validateAdditionalReviewerCapacity(Long reviewId) {
+        if (reviewAdditionalReviewerRepository.countByReview_Id(reviewId) >= MAX_ADDITIONAL_REVIEWER_COUNT) {
+            throw new ReviewDomainException(ReviewErrorCode.ADDITIONAL_REVIEWER_LIMIT_EXCEEDED);
+        }
+    }
+
+    private void validateAdditionalReviewerEligibility(Review review, Long userId) {
+        if (Objects.equals(review.getSubmittedBy(), userId)) {
+            throw new ReviewDomainException(
+                    ReviewErrorCode.ADDITIONAL_REVIEWER_ASSIGN_NOT_ALLOWED,
+                    "The submitter cannot be assigned as an additional reviewer."
+            );
+        }
+        if (reviewReferenceRepository.existsByReview_IdAndUserId(review.getId(), userId)) {
+            throw new ReviewDomainException(
+                    ReviewErrorCode.ADDITIONAL_REVIEWER_ASSIGN_NOT_ALLOWED,
+                    "A reference cannot be assigned as an additional reviewer."
+            );
+        }
+    }
+
+    private void validateAttachmentDrafts(List<SubmitReviewCommand.AttachmentDraft> attachments) {
+        if (attachments == null || attachments.isEmpty()) {
+            return;
+        }
+        if (attachments.size() > MAX_ATTACHMENT_COUNT) {
+            throw new ReviewDomainException(ReviewErrorCode.ATTACHMENT_LIMIT_EXCEEDED);
+        }
+
+        long totalSize = 0L;
+        for (SubmitReviewCommand.AttachmentDraft attachment : attachments) {
+            validateAttachmentRequest(attachment.originalName(), attachment.contentType(), attachment.sizeBytes());
+            totalSize += attachment.sizeBytes();
+        }
+
+        if (totalSize > MAX_TOTAL_ATTACHMENT_SIZE_BYTES) {
+            throw new ReviewDomainException(ReviewErrorCode.ATTACHMENT_TOTAL_SIZE_EXCEEDED);
+        }
+    }
+
+    private void validateAttachmentCapacity(Long reviewId, Long newAttachmentSize) {
+        if (reviewAttachmentRepository.countByReview_Id(reviewId) >= MAX_ATTACHMENT_COUNT) {
+            throw new ReviewDomainException(ReviewErrorCode.ATTACHMENT_LIMIT_EXCEEDED);
+        }
+
+        long totalSize = reviewAttachmentRepository.findAllByReview_IdOrderBySortOrderAsc(reviewId)
+                .stream()
+                .mapToLong(ReviewAttachment::getSizeBytes)
+                .sum();
+        if (totalSize + newAttachmentSize > MAX_TOTAL_ATTACHMENT_SIZE_BYTES) {
+            throw new ReviewDomainException(ReviewErrorCode.ATTACHMENT_TOTAL_SIZE_EXCEEDED);
+        }
+    }
+
+    private void validateAttachmentRequest(String originalName, String contentType, Long sizeBytes) {
+        if (sizeBytes == null || sizeBytes <= 0) {
+            throw new ReviewDomainException(ReviewErrorCode.REVIEW_VALIDATION_ERROR, "sizeBytes must be positive");
+        }
+        if (sizeBytes > MAX_ATTACHMENT_SIZE_BYTES) {
+            throw new ReviewDomainException(ReviewErrorCode.ATTACHMENT_SIZE_EXCEEDED);
+        }
+        validateAttachmentExtension(originalName);
+        validateAttachmentContentType(contentType);
+    }
+
+    private void validateAttachmentExtension(String originalName) {
+        if (originalName == null || originalName.isBlank()) {
+            throw new ReviewDomainException(ReviewErrorCode.REVIEW_VALIDATION_ERROR, "originalName must not be blank");
+        }
+        int extensionSeparatorIndex = originalName.lastIndexOf('.');
+        if (extensionSeparatorIndex < 0 || extensionSeparatorIndex == originalName.length() - 1) {
+            return;
+        }
+
+        String extension = originalName.substring(extensionSeparatorIndex + 1).toLowerCase();
+        if (!ALLOWED_ATTACHMENT_EXTENSIONS.contains(extension)) {
+            throw new ReviewDomainException(ReviewErrorCode.ATTACHMENT_EXTENSION_NOT_ALLOWED);
+        }
+    }
+
+    private void validateAttachmentContentType(String contentType) {
+        if (contentType == null || contentType.isBlank()) {
+            throw new ReviewDomainException(ReviewErrorCode.ATTACHMENT_CONTENT_TYPE_NOT_ALLOWED);
+        }
+        String normalizedContentType = contentType.toLowerCase();
+        if (!ALLOWED_ATTACHMENT_CONTENT_TYPES.contains(normalizedContentType)) {
+            throw new ReviewDomainException(ReviewErrorCode.ATTACHMENT_CONTENT_TYPE_NOT_ALLOWED);
+        }
     }
 
     /**
@@ -766,7 +961,7 @@ public class ReviewCommandService {
         try {
             return objectMapper.writeValueAsString(new LinkedHashMap<>(metadata));
         } catch (JsonProcessingException exception) {
-            throw new ReviewDomainException(ApiErrorCode.INTERNAL_SERVER_ERROR, exception.getMessage());
+            throw new ReviewDomainException(ReviewErrorCode.REVIEW_INTERNAL_SERVER_ERROR, exception.getMessage());
         }
     }
 }

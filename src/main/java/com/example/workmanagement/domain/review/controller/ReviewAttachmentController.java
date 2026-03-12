@@ -58,9 +58,7 @@ public class ReviewAttachmentController {
             @Valid @RequestBody ReviewAttachmentPresignRequest request
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(
-                        "Attachment presign URL created.",
-                        reviewCommandService.createAttachmentPresignUrl(
+                .body(ApiResponse.success(reviewCommandService.createAttachmentPresignUrl(
                                 reviewId,
                                 lockVersion,
                                 reviewDtoMapper.toCreateAttachmentPresignCommand(request),
@@ -92,9 +90,7 @@ public class ReviewAttachmentController {
                 resolveActor(actorId, roles, permissions)
         );
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(
-                        "Review attachment confirmed.",
-                        result
+                .body(ApiResponse.success(result
                 ));
     }
 
@@ -121,9 +117,7 @@ public class ReviewAttachmentController {
                 lockVersion,
                 resolveActor(actorId, roles, permissions)
         );
-        return ResponseEntity.ok(ApiResponse.success(
-                "Review attachment deleted.",
-                result
+        return ResponseEntity.ok(ApiResponse.success(result
         ));
     }
 

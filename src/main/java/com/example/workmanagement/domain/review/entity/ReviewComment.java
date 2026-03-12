@@ -1,5 +1,7 @@
 package com.example.workmanagement.domain.review.entity;
 
+import com.example.workmanagement.domain.review.exception.ReviewDomainException;
+import com.example.workmanagement.domain.review.error.ReviewErrorCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -12,6 +14,7 @@ import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.Objects;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -70,9 +73,9 @@ public class ReviewComment {
     }
 
     public ReviewComment(Review review, Long authorId, String content) {
-        this.review = review;
-        this.authorId = authorId;
-        this.content = content;
+        this.review = Objects.requireNonNull(review, "review must not be null");
+        this.authorId = Objects.requireNonNull(authorId, "authorId must not be null");
+        this.content = validateContent(content);
         this.edited = false;
     }
 
@@ -157,7 +160,10 @@ public class ReviewComment {
      * 코멘트 본문을 수정하고 편집 표시를 남긴다.
      */
     public void updateContent(String content, Instant editedAt) {
-        this.content = content;
+        if (isDeleted()) {
+            throw new ReviewDomainException(ReviewErrorCode.COMMENT_UPDATE_NOT_ALLOWED);
+        }
+        this.content = validateContent(content);
         this.edited = true;
         this.editedAt = editedAt;
     }
@@ -166,7 +172,23 @@ public class ReviewComment {
      * 코멘트를 소프트 삭제 상태로 전환한다.
      */
     public void delete(Long deletedBy, Instant deletedAt) {
+        if (isDeleted()) {
+            throw new ReviewDomainException(ReviewErrorCode.COMMENT_DELETE_NOT_ALLOWED);
+        }
         this.deletedBy = deletedBy;
         this.deletedAt = deletedAt;
+    }
+
+    private static String validateContent(String content) {
+        if (content == null || content.isBlank()) {
+            throw new ReviewDomainException(
+                    ReviewErrorCode.REVIEW_VALIDATION_ERROR,
+                    "comment content must not be blank"
+            );
+        }
+        if (content.length() > 1000) {
+            throw new ReviewDomainException(ReviewErrorCode.REVIEW_COMMENT_TOO_LONG);
+        }
+        return content;
     }
 }

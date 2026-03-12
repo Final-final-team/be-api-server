@@ -62,9 +62,7 @@ public class ReviewReferenceController {
                 resolveActor(actorId, roles, permissions)
         );
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(
-                        "Review reference assigned.",
-                        result
+                .body(ApiResponse.success(result
                 ));
     }
 
@@ -91,9 +89,7 @@ public class ReviewReferenceController {
                 lockVersion,
                 resolveActor(actorId, roles, permissions)
         );
-        return ResponseEntity.ok(ApiResponse.success(
-                "Review reference removed.",
-                result
+        return ResponseEntity.ok(ApiResponse.success(result
         ));
     }
 

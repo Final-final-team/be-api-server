@@ -1,6 +1,5 @@
 package com.example.workmanagement.infrastructure.storage;
 
-import com.example.workmanagement.global.error.NotYetImplementedException;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -11,6 +10,6 @@ public class NoopStoragePresignService implements StoragePresignService {
      */
     @Override
     public StoragePresignResult createUploadUrl(String originalName, String contentType, long sizeBytes) {
-        throw new NotYetImplementedException("S3 presigned URL integration is pending infrastructure setup.");
+        throw new UnsupportedOperationException("S3 presigned URL integration is pending infrastructure setup.");
     }
 }

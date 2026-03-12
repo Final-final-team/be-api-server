@@ -61,9 +61,7 @@ public class ReviewCommentController {
                 resolveActor(actorId, roles, permissions)
         );
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(
-                        "Review comment created.",
-                        result
+                .body(ApiResponse.success(result
                 ));
     }
 
@@ -89,9 +87,7 @@ public class ReviewCommentController {
                 reviewDtoMapper.toUpdateCommentCommand(request),
                 resolveActor(actorId, roles, permissions)
         );
-        return ResponseEntity.ok(ApiResponse.success(
-                "Review comment updated.",
-                result
+        return ResponseEntity.ok(ApiResponse.success(result
         ));
     }
 
@@ -115,9 +111,7 @@ public class ReviewCommentController {
                 commentId,
                 resolveActor(actorId, roles, permissions)
         );
-        return ResponseEntity.ok(ApiResponse.success(
-                "Review comment deleted.",
-                result
+        return ResponseEntity.ok(ApiResponse.success(result
         ));
     }
 

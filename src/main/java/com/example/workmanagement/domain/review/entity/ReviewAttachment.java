@@ -1,5 +1,7 @@
 package com.example.workmanagement.domain.review.entity;
 
+import com.example.workmanagement.domain.review.exception.ReviewDomainException;
+import com.example.workmanagement.domain.review.error.ReviewErrorCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -72,11 +74,11 @@ public class ReviewAttachment {
             Long uploadedBy
     ) {
         this.review = Objects.requireNonNull(review, "review must not be null");
-        this.objectKey = Objects.requireNonNull(objectKey, "objectKey must not be null");
-        this.originalName = Objects.requireNonNull(originalName, "originalName must not be null");
+        this.objectKey = validateObjectKey(objectKey);
+        this.originalName = validateOriginalName(originalName);
         this.contentType = contentType;
-        this.sizeBytes = Objects.requireNonNull(sizeBytes, "sizeBytes must not be null");
-        this.sortOrder = Objects.requireNonNull(sortOrder, "sortOrder must not be null");
+        this.sizeBytes = validateSizeBytes(sizeBytes);
+        this.sortOrder = validateSortOrder(sortOrder);
         this.uploadedBy = Objects.requireNonNull(uploadedBy, "uploadedBy must not be null");
     }
 
@@ -141,5 +143,42 @@ public class ReviewAttachment {
      */
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    private static String validateObjectKey(String objectKey) {
+        if (objectKey == null || objectKey.isBlank()) {
+            throw new ReviewDomainException(ReviewErrorCode.REVIEW_VALIDATION_ERROR, "objectKey must not be blank");
+        }
+        return objectKey;
+    }
+
+    private static String validateOriginalName(String originalName) {
+        if (originalName == null || originalName.isBlank()) {
+            throw new ReviewDomainException(ReviewErrorCode.REVIEW_VALIDATION_ERROR, "originalName must not be blank");
+        }
+        if (originalName.length() > 255) {
+            throw new ReviewDomainException(
+                    ReviewErrorCode.REVIEW_VALIDATION_ERROR,
+                    "originalName must not exceed 255 characters"
+            );
+        }
+        return originalName;
+    }
+
+    private static Long validateSizeBytes(Long sizeBytes) {
+        if (sizeBytes == null || sizeBytes <= 0) {
+            throw new ReviewDomainException(ReviewErrorCode.REVIEW_VALIDATION_ERROR, "sizeBytes must be positive");
+        }
+        if (sizeBytes > 20L * 1024 * 1024) {
+            throw new ReviewDomainException(ReviewErrorCode.ATTACHMENT_SIZE_EXCEEDED);
+        }
+        return sizeBytes;
+    }
+
+    private static Integer validateSortOrder(Integer sortOrder) {
+        if (sortOrder == null || sortOrder < 0) {
+            throw new ReviewDomainException(ReviewErrorCode.REVIEW_VALIDATION_ERROR, "sortOrder must be zero or positive");
+        }
+        return sortOrder;
     }
 }

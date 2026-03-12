@@ -59,9 +59,7 @@ public class ReviewAdditionalReviewerController {
                 resolveActor(actorId, roles, permissions)
         );
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(
-                        "Additional reviewer assigned.",
-                        result
+                .body(ApiResponse.success(result
                 ));
     }
 
@@ -85,9 +83,7 @@ public class ReviewAdditionalReviewerController {
                 userId,
                 resolveActor(actorId, roles, permissions)
         );
-        return ResponseEntity.ok(ApiResponse.success(
-                "Additional reviewer removed.",
-                result
+        return ResponseEntity.ok(ApiResponse.success(result
         ));
     }
 

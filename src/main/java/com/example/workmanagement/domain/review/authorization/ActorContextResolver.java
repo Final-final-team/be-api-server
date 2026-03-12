@@ -1,7 +1,7 @@
 package com.example.workmanagement.domain.review.authorization;
 
 import com.example.workmanagement.domain.review.exception.ReviewDomainException;
-import com.example.workmanagement.global.error.ApiErrorCode;
+import com.example.workmanagement.domain.review.error.ReviewErrorCode;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -15,7 +15,7 @@ public class ActorContextResolver {
      */
     public ActorContext resolve(String actorIdHeader, String rolesHeader, String permissionsHeader) {
         if (actorIdHeader == null || actorIdHeader.isBlank()) {
-            throw new ReviewDomainException(ApiErrorCode.ACTOR_HEADER_MISSING);
+            throw new ReviewDomainException(ReviewErrorCode.ACTOR_HEADER_MISSING);
         }
 
         try {
@@ -25,7 +25,7 @@ public class ActorContextResolver {
                     parseCsv(permissionsHeader)
             );
         } catch (NumberFormatException exception) {
-            throw new ReviewDomainException(ApiErrorCode.VALIDATION_ERROR, "X-Actor-Id header must be a number.");
+            throw new ReviewDomainException(ReviewErrorCode.INVALID_ACTOR_ID_HEADER);
         }
     }
 

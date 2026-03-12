@@ -69,9 +69,7 @@ public class ReviewController {
                 resolveActor(actorId, roles, permissions)
         );
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(
-                        "Review submitted.",
-                        result
+                .body(ApiResponse.success(result
                 ));
     }
 
@@ -82,10 +80,15 @@ public class ReviewController {
     @Operation(summary = "업무별 검토 목록 조회", description = "특정 업무에 연결된 검토 목록을 최신 라운드 순으로 조회합니다.")
     public ResponseEntity<ApiResponse<List<ReviewSummaryResult>>> getReviewsByTask(
             @Parameter(description = "검토 목록을 조회할 업무 ID", example = "1")
-            @PathVariable Long taskId
+            @PathVariable Long taskId,
+            @Parameter(description = "요청자 사용자 ID", example = "101")
+            @RequestHeader("X-Actor-Id") String actorId,
+            @RequestHeader(value = "X-Actor-Roles", required = false) String roles,
+            @RequestHeader(value = "X-Actor-Permissions", required = false) String permissions
     ) {
         return ResponseEntity.ok(
-                ApiResponse.success("Task reviews fetched.", reviewQueryService.findReviewsByTask(taskId))
+                ApiResponse.success(reviewQueryService.findReviewsByTask(taskId, resolveActor(actorId, roles, permissions))
+                )
         );
     }
 
@@ -96,11 +99,13 @@ public class ReviewController {
     @Operation(summary = "검토 상세 조회", description = "검토 본문, 참조자, 추가 검토자, 첨부, 코멘트를 포함한 상세 정보를 조회합니다.")
     public ResponseEntity<ApiResponse<ReviewDetailResult>> getReview(
             @Parameter(description = "조회할 검토 ID", example = "10")
-            @PathVariable Long reviewId
+            @PathVariable Long reviewId,
+            @Parameter(description = "요청자 사용자 ID", example = "101")
+            @RequestHeader("X-Actor-Id") String actorId,
+            @RequestHeader(value = "X-Actor-Roles", required = false) String roles,
+            @RequestHeader(value = "X-Actor-Permissions", required = false) String permissions
     ) {
-        return ResponseEntity.ok(ApiResponse.success(
-                "Review detail fetched.",
-                reviewQueryService.findReview(reviewId)
+        return ResponseEntity.ok(ApiResponse.success(reviewQueryService.findReview(reviewId, resolveActor(actorId, roles, permissions))
         ));
     }
 
@@ -126,9 +131,7 @@ public class ReviewController {
                 reviewDtoMapper.toUpdateReviewCommand(request),
                 resolveActor(actorId, roles, permissions)
         );
-        return ResponseEntity.ok(ApiResponse.success(
-                "Review updated.",
-                result
+        return ResponseEntity.ok(ApiResponse.success(result
         ));
     }
 
@@ -153,9 +156,7 @@ public class ReviewController {
                 resolveActor(actorId, roles, permissions)
         );
         return ResponseEntity.ok(
-                ApiResponse.success(
-                        "Review approved.",
-                        result
+                ApiResponse.success(result
                 )
         );
     }
@@ -183,9 +184,7 @@ public class ReviewController {
                 resolveActor(actorId, roles, permissions)
         );
         return ResponseEntity.ok(
-                ApiResponse.success(
-                        "Review rejected.",
-                        result
+                ApiResponse.success(result
                 )
         );
     }
@@ -214,9 +213,7 @@ public class ReviewController {
                 resolveActor(actorId, roles, permissions)
         );
         return ResponseEntity.ok(
-                ApiResponse.success(
-                        "Review cancelled.",
-                        result
+                ApiResponse.success(result
                 )
         );
     }
