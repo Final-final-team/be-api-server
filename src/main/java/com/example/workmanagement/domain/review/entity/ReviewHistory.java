@@ -15,7 +15,9 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.Objects;
+import lombok.Getter;
 
+@Getter
 @Entity
 @Table(name = "review_histories")
 public class ReviewHistory {
@@ -108,59 +110,4 @@ public class ReviewHistory {
         );
     }
 
-    /**
-     * 감사 로그 식별자를 반환한다.
-     */
-    public Long getId() {
-        return id;
-    }
-
-    /**
-     * 액션 타입을 반환한다.
-     */
-    public ReviewHistoryActionType getActionType() {
-        return actionType;
-    }
-
-    /**
-     * 액션 수행자 식별자를 반환한다.
-     */
-    public Long getActorId() {
-        return actorId;
-    }
-
-    /**
-     * 액션 사유를 반환한다.
-     */
-    public String getReason() {
-        return reason;
-    }
-
-    /**
-     * 이력 대상 타입을 반환한다.
-     */
-    public ReviewHistoryTargetType getTargetType() {
-        return targetType;
-    }
-
-    /**
-     * 이력 대상 식별자를 반환한다.
-     */
-    public Long getTargetId() {
-        return targetId;
-    }
-
-    /**
-     * 메타데이터 JSON을 반환한다.
-     */
-    public String getMetadataJson() {
-        return metadataJson;
-    }
-
-    /**
-     * 발생 시각을 반환한다.
-     */
-    public Instant getOccurredAt() {
-        return occurredAt;
-    }
 }

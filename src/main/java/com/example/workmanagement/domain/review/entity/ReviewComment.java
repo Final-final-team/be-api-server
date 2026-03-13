@@ -15,10 +15,12 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.Objects;
+import lombok.Getter;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+@Getter
 @Entity
 @Table(name = "review_comments")
 @EntityListeners(AuditingEntityListener.class)
@@ -77,76 +79,6 @@ public class ReviewComment {
         this.authorId = Objects.requireNonNull(authorId, "authorId must not be null");
         this.content = validateContent(content);
         this.edited = false;
-    }
-
-    /**
-     * 코멘트 식별자를 반환한다.
-     */
-    public Long getId() {
-        return id;
-    }
-
-    /**
-     * 연결된 검토를 반환한다.
-     */
-    public Review getReview() {
-        return review;
-    }
-
-    /**
-     * 코멘트 작성자 식별자를 반환한다.
-     */
-    public Long getAuthorId() {
-        return authorId;
-    }
-
-    /**
-     * 코멘트 본문을 반환한다.
-     */
-    public String getContent() {
-        return content;
-    }
-
-    /**
-     * 수정 여부를 반환한다.
-     */
-    public boolean isEdited() {
-        return edited;
-    }
-
-    /**
-     * 수정 시각을 반환한다.
-     */
-    public Instant getEditedAt() {
-        return editedAt;
-    }
-
-    /**
-     * 삭제 시각을 반환한다.
-     */
-    public Instant getDeletedAt() {
-        return deletedAt;
-    }
-
-    /**
-     * 삭제자 식별자를 반환한다.
-     */
-    public Long getDeletedBy() {
-        return deletedBy;
-    }
-
-    /**
-     * 생성 시각을 반환한다.
-     */
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    /**
-     * 수정 시각을 반환한다.
-     */
-    public Instant getUpdatedAt() {
-        return updatedAt;
     }
 
     /**

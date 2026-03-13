@@ -13,9 +13,11 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
 import java.util.Objects;
+import lombok.Getter;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+@Getter
 @Entity
 @Table(
         name = "review_references",
@@ -59,38 +61,4 @@ public class ReviewReference {
         this.addedBy = Objects.requireNonNull(addedBy, "addedBy must not be null");
     }
 
-    /**
-     * 참조자 매핑 식별자를 반환한다.
-     */
-    public Long getId() {
-        return id;
-    }
-
-    /**
-     * 연결된 검토를 반환한다.
-     */
-    public Review getReview() {
-        return review;
-    }
-
-    /**
-     * 참조자 사용자 식별자를 반환한다.
-     */
-    public Long getUserId() {
-        return userId;
-    }
-
-    /**
-     * 참조자 추가 수행자를 반환한다.
-     */
-    public Long getAddedBy() {
-        return addedBy;
-    }
-
-    /**
-     * 생성 시각을 반환한다.
-     */
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
 }

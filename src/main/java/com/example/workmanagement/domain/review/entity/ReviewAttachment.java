@@ -14,9 +14,11 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.Objects;
+import lombok.Getter;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+@Getter
 @Entity
 @Table(name = "review_attachments")
 @EntityListeners(AuditingEntityListener.class)
@@ -80,69 +82,6 @@ public class ReviewAttachment {
         this.sizeBytes = validateSizeBytes(sizeBytes);
         this.sortOrder = validateSortOrder(sortOrder);
         this.uploadedBy = Objects.requireNonNull(uploadedBy, "uploadedBy must not be null");
-    }
-
-    /**
-     * 첨부 식별자를 반환한다.
-     */
-    public Long getId() {
-        return id;
-    }
-
-    /**
-     * 연결된 검토를 반환한다.
-     */
-    public Review getReview() {
-        return review;
-    }
-
-    /**
-     * 스토리지 객체 키를 반환한다.
-     */
-    public String getObjectKey() {
-        return objectKey;
-    }
-
-    /**
-     * 원본 파일명을 반환한다.
-     */
-    public String getOriginalName() {
-        return originalName;
-    }
-
-    /**
-     * MIME 타입을 반환한다.
-     */
-    public String getContentType() {
-        return contentType;
-    }
-
-    /**
-     * 파일 크기를 반환한다.
-     */
-    public Long getSizeBytes() {
-        return sizeBytes;
-    }
-
-    /**
-     * 정렬 순서를 반환한다.
-     */
-    public Integer getSortOrder() {
-        return sortOrder;
-    }
-
-    /**
-     * 업로더 식별자를 반환한다.
-     */
-    public Long getUploadedBy() {
-        return uploadedBy;
-    }
-
-    /**
-     * 생성 시각을 반환한다.
-     */
-    public Instant getCreatedAt() {
-        return createdAt;
     }
 
     private static String validateObjectKey(String objectKey) {

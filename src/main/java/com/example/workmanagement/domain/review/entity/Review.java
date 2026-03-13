@@ -16,10 +16,12 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import java.time.Instant;
 import java.util.Objects;
+import lombok.Getter;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+@Getter
 @Entity
 @Table(name = "reviews")
 @EntityListeners(AuditingEntityListener.class)
@@ -103,104 +105,6 @@ public class Review {
      */ //taskId 존재 여부 검증 로직 task 도메인 추가되면 추가 예정
     public static Review submit(Long taskId, Integer roundNo, String content, Long submittedBy) {
         return new Review(taskId, roundNo, content, submittedBy);
-    }
-
-    /**
-     * 검토 식별자를 반환한다.
-     */
-    public Long getId() {
-        return id;
-    }
-
-    /**
-     * 연결된 업무 식별자를 반환한다.
-     */
-    public Long getTaskId() {
-        return taskId;
-    }
-
-    /**
-     * 검토 라운드를 반환한다.
-     */
-    public Integer getRoundNo() {
-        return roundNo;
-    }
-
-    /**
-     * 현재 검토 상태를 반환한다.
-     */
-    public ReviewStatus getStatus() {
-        return status;
-    }
-
-    /**
-     * 검토 본문을 반환한다.
-     */
-    public String getContent() {
-        return content;
-    }
-
-    /**
-     * 반려 사유를 반환한다.
-     */
-    public String getRejectionReason() {
-        return rejectionReason;
-    }
-
-    /**
-     * 상신자 식별자를 반환한다.
-     */
-    public Long getSubmittedBy() {
-        return submittedBy;
-    }
-
-    /**
-     * 승인 또는 반려 처리자 식별자를 반환한다.
-     */
-    public Long getDecidedBy() {
-        return decidedBy;
-    }
-
-    /**
-     * 승인 또는 반려 시각을 반환한다.
-     */
-    public Instant getDecidedAt() {
-        return decidedAt;
-    }
-
-    /**
-     * 취소 처리자 식별자를 반환한다.
-     */
-    public Long getCancelledBy() {
-        return cancelledBy;
-    }
-
-    /**
-     * 취소 시각을 반환한다.
-     */
-    public Instant getCancelledAt() {
-        return cancelledAt;
-    }
-
-    /**
-     * 낙관적 락 버전을 반환한다.
-     */
-    public Long getLockVersion() {
-        return lockVersion;
-    }
-
-    /**
-     * 생성 시각을 반환한다.
-     */
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    /**
-     * 수정 시각을 반환한다.
-     */
-    public Instant getUpdatedAt() {
-        return updatedAt;
     }
 
     /**

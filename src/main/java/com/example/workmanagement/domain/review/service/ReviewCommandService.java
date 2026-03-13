@@ -31,6 +31,9 @@ import com.example.workmanagement.domain.review.service.command.UpdateReviewComm
 import com.example.workmanagement.domain.review.service.result.ReviewAttachmentPresignResult;
 import com.example.workmanagement.domain.review.service.result.ReviewDetailResult;
 import com.example.workmanagement.domain.review.error.ReviewErrorCode;
+import com.example.workmanagement.domain.task.entity.Task;
+import com.example.workmanagement.domain.task.entity.TaskStatus;
+import com.example.workmanagement.domain.task.repository.TaskRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
