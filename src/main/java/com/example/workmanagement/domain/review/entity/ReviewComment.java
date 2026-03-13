@@ -1,0 +1,126 @@
+package com.example.workmanagement.domain.review.entity;
+
+import com.example.workmanagement.domain.review.exception.ReviewDomainException;
+import com.example.workmanagement.domain.review.error.ReviewErrorCode;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Lob;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import java.time.Instant;
+import java.util.Objects;
+import lombok.Getter;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
+@Getter
+@Entity
+@Table(name = "review_comments")
+@EntityListeners(AuditingEntityListener.class)
+public class ReviewComment {
+
+    /** 코멘트 식별자 */
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    /** 코멘트가 연결된 검토 */
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "review_id", nullable = false)
+    private Review review;
+
+    /** 코멘트 작성자 식별자 */
+    @Column(name = "author_id", nullable = false)
+    private Long authorId;
+
+    /** 코멘트 본문 */
+    @Lob
+    @Column(nullable = false)
+    private String content;
+
+    /** 편집 여부 표시 */
+    @Column(name = "is_edited", nullable = false)
+    private boolean edited;
+
+    /** 마지막 편집 시각 */
+    @Column(name = "edited_at")
+    private Instant editedAt;
+
+    /** 소프트 삭제 시각 */
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
+
+    /** 소프트 삭제 수행자 식별자 */
+    @Column(name = "deleted_by")
+    private Long deletedBy;
+
+    /** 코멘트 생성 시각 */
+    @CreatedDate
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    /** 코멘트 최종 수정 시각 */
+    @LastModifiedDate
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
+
+    protected ReviewComment() {
+    }
+
+    public ReviewComment(Review review, Long authorId, String content) {
+        this.review = Objects.requireNonNull(review, "review must not be null");
+        this.authorId = Objects.requireNonNull(authorId, "authorId must not be null");
+        this.content = validateContent(content);
+        this.edited = false;
+    }
+
+    /**
+     * 삭제 여부를 반환한다.
+     */
+    public boolean isDeleted() {
+        return deletedAt != null;
+    }
+
+    /**
+     * 코멘트 본문을 수정하고 편집 표시를 남긴다.
+     */
+    public void updateContent(String content, Instant editedAt) {
+        if (isDeleted()) {
+            throw new ReviewDomainException(ReviewErrorCode.COMMENT_UPDATE_NOT_ALLOWED);
+        }
+        this.content = validateContent(content);
+        this.edited = true;
+        this.editedAt = editedAt;
+    }
+
+    /**
+     * 코멘트를 소프트 삭제 상태로 전환한다.
+     */
+    public void delete(Long deletedBy, Instant deletedAt) {
+        if (isDeleted()) {
+            throw new ReviewDomainException(ReviewErrorCode.COMMENT_DELETE_NOT_ALLOWED);
+        }
+        this.deletedBy = deletedBy;
+        this.deletedAt = deletedAt;
+    }
+
+    private static String validateContent(String content) {
+        if (content == null || content.isBlank()) {
+            throw new ReviewDomainException(
+                    ReviewErrorCode.REVIEW_VALIDATION_ERROR,
+                    "comment content must not be blank"
+            );
+        }
+        if (content.length() > 1000) {
+            throw new ReviewDomainException(ReviewErrorCode.REVIEW_COMMENT_TOO_LONG);
+        }
+        return content;
+    }
+}

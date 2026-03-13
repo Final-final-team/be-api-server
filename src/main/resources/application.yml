@@ -20,6 +20,21 @@ spring:
           time_zone: UTC
     database-platform: org.hibernate.dialect.PostgreSQLDialect
 
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: method
+  api-docs:
+    path: /v3/api-docs
+
+app:
+  cors:
+    allowed-origins:
+      - https://task-automation-ui.vercel.app
+      - http://localhost:3000
+      - http://127.0.0.1:3000
+
 logging:
   level:
     org.hibernate.SQL: DEBUG
