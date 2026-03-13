@@ -1,15 +1,16 @@
 package com.example.workmanagement.domain.review.authorization;
 
+import com.example.workmanagement.domain.review.entity.MockTask;
 import com.example.workmanagement.domain.review.entity.Review;
 import com.example.workmanagement.domain.review.entity.ReviewComment;
-import com.example.workmanagement.domain.task.entity.Task;
+
 
 public interface ReviewAuthorizationPort {
 
     /**
      * 요청자가 검토 상신 전역 권한을 보유하는지 확인한다.
      */
-    boolean canSubmit(Task task, ActorContext actor);
+    boolean canSubmit(MockTask task, ActorContext actor);
 
     /**
      * 요청자가 검토 본문 수정 전역 권한을 보유하는지 확인한다.

@@ -31,8 +31,8 @@ import com.example.workmanagement.domain.review.service.command.UpdateReviewComm
 import com.example.workmanagement.domain.review.service.result.ReviewAttachmentPresignResult;
 import com.example.workmanagement.domain.review.service.result.ReviewDetailResult;
 import com.example.workmanagement.domain.review.error.ReviewErrorCode;
-import com.example.workmanagement.domain.task.entity.Task;
-import com.example.workmanagement.domain.task.entity.MockTaskStatus;
+import com.example.workmanagement.domain.review.entity.MockTask;
+import com.example.workmanagement.domain.review.entity.MockTaskStatus;
 import com.example.workmanagement.domain.task.repository.MockTaskRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -124,7 +124,7 @@ public class ReviewCommandService {
      * 최초 상신 또는 재상신용 검토를 생성한다.
      */
     public ReviewDetailResult submitReview(Long taskId, SubmitReviewCommand command, ActorContext actor) {
-        Task task = loadTask(taskId);
+        MockTask task = loadTask(taskId);
 
         if (task.getStatus() != MockTaskStatus.IN_PROGRESS) {
             throw new ReviewDomainException(ReviewErrorCode.REVIEW_SUBMIT_NOT_ALLOWED);
@@ -203,7 +203,7 @@ public class ReviewCommandService {
                 ReviewErrorCode.REVIEW_APPROVAL_FORBIDDEN
         );
         validateLockVersion(review, lockVersion);
-        Task task = loadTask(review.getTaskId());
+        MockTask task = loadTask(review.getTaskId());
 
         review.approve(actor.actorId(), Instant.now());
         task.markCompleted();
@@ -236,7 +236,7 @@ public class ReviewCommandService {
                 ReviewErrorCode.REVIEW_REJECTION_FORBIDDEN
         );
         validateLockVersion(review, lockVersion);
-        Task task = loadTask(review.getTaskId());
+        MockTask task = loadTask(review.getTaskId());
 
         if (command.reason() == null || command.reason().isBlank()) {
             throw new ReviewDomainException(ReviewErrorCode.REJECTION_REASON_REQUIRED);
@@ -273,7 +273,7 @@ public class ReviewCommandService {
                 ReviewErrorCode.REVIEW_CANCEL_FORBIDDEN
         );
         validateLockVersion(review, lockVersion);
-        Task task = loadTask(review.getTaskId());
+        MockTask task = loadTask(review.getTaskId());
 
         review.cancel(actor.actorId(), Instant.now());
         task.markInProgress();
@@ -650,7 +650,7 @@ public class ReviewCommandService {
     /**
      * 업무 식별자로 업무를 조회한다.
      */
-    private Task loadTask(Long taskId) {
+    private MockTask loadTask(Long taskId) {
         return taskRepository.findById(taskId)
                 .orElseThrow(() -> new ReviewDomainException(ReviewErrorCode.TASK_NOT_FOUND));
     }
@@ -707,7 +707,7 @@ public class ReviewCommandService {
     /**
      * 요청자가 업무 작성자인지 확인한다.
      */
-    private boolean isTaskAuthor(Task task, ActorContext actor) {
+    private boolean isTaskAuthor(MockTask task, ActorContext actor) {
         return Objects.equals(task.getAuthorId(), actor.actorId());
     }
 
