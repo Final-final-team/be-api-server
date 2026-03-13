@@ -51,6 +51,7 @@ public class ReviewController {
 
     /**
      * 최초 상신과 재상신을 포함한 검토 제출 요청을 처리한다.
+     * 정책 코드: RVW-P-03-001
      */
     @PostMapping("/tasks/{taskId}/reviews")
     @Operation(summary = "검토 제출", description = "업무에 대한 최초 상신 또는 재상신 검토를 생성합니다.")
@@ -75,6 +76,7 @@ public class ReviewController {
 
     /**
      * 업무 단위의 검토 목록을 조회한다.
+     * 정책 코드: RVW-P-02-001, RVW-P-15-003
      */
     @GetMapping("/tasks/{taskId}/reviews")
     @Operation(summary = "업무별 검토 목록 조회", description = "특정 업무에 연결된 검토 목록을 최신 라운드 순으로 조회합니다.")
@@ -94,6 +96,7 @@ public class ReviewController {
 
     /**
      * 검토 상세를 조회한다.
+     * 정책 코드: RVW-P-02-001, RVW-P-15-001
      */
     @GetMapping("/reviews/{reviewId}")
     @Operation(summary = "검토 상세 조회", description = "검토 본문, 참조자, 추가 검토자, 첨부, 코멘트를 포함한 상세 정보를 조회합니다.")
@@ -111,6 +114,7 @@ public class ReviewController {
 
     /**
      * 제출된 검토의 본문을 수정한다.
+     * 정책 코드: RVW-P-03-002, RVW-P-10-001
      */
     @PatchMapping("/reviews/{reviewId}")
     @Operation(summary = "검토 본문 수정", description = "제출 상태의 검토 본문을 수정합니다.")
@@ -137,6 +141,7 @@ public class ReviewController {
 
     /**
      * 제출된 검토를 승인한다.
+     * 정책 코드: RVW-P-03-003, RVW-P-10-001
      */
     @PostMapping("/reviews/{reviewId}/approve")
     @Operation(summary = "검토 승인", description = "제출된 검토를 승인하고 연결된 업무를 완료 상태로 전환합니다.")
@@ -163,6 +168,7 @@ public class ReviewController {
 
     /**
      * 제출된 검토를 반려한다.
+     * 정책 코드: RVW-P-03-004, RVW-P-10-001, RVW-P-12-001
      */
     @PostMapping("/reviews/{reviewId}/reject")
     @Operation(summary = "검토 반려", description = "제출된 검토를 반려하고 연결된 업무를 진행 중 상태로 되돌립니다.")
@@ -191,6 +197,7 @@ public class ReviewController {
 
     /**
      * 제출된 검토를 취소한다.
+     * 정책 코드: RVW-P-03-005, RVW-P-10-001, RVW-P-12-002
      */
     @PostMapping("/reviews/{reviewId}/cancel")
     @Operation(summary = "검토 취소", description = "제출된 검토를 취소하고 연결된 업무를 진행 중 상태로 되돌립니다.")

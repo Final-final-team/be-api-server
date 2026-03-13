@@ -41,6 +41,7 @@ public class ReviewAdditionalReviewerController {
 
     /**
      * 검토의 추가 검토자를 할당한다.
+     * 정책 코드: RVW-P-06-003, RVW-P-06-004, RVW-P-06-005, RVW-P-06-006
      */
     @PostMapping
     @Operation(summary = "추가 검토자 지정", description = "검토에 추가 검토자를 지정합니다.")
@@ -65,6 +66,7 @@ public class ReviewAdditionalReviewerController {
 
     /**
      * 검토의 추가 검토자 할당을 해제한다.
+     * 정책 코드: RVW-P-06-003, RVW-P-06-004
      */
     @DeleteMapping("/{userId}")
     @Operation(summary = "추가 검토자 해제", description = "검토에 지정된 추가 검토자를 제거합니다.")

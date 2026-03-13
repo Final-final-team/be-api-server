@@ -23,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class ReviewQueryService {
 
-    private final MockTaskRepository taskRepository;
+    private final MockTaskRepository taskRepository; // TaskRepo 직접 참조 제거 예정
     private final ReviewRepository reviewRepository;
     private final ReviewReferenceRepository reviewReferenceRepository;
     private final ReviewAdditionalReviewerRepository reviewAdditionalReviewerRepository;
@@ -34,7 +34,7 @@ public class ReviewQueryService {
     private final ReviewAuthorizationPort reviewAuthorizationPort;
 
     public ReviewQueryService(
-            MockTaskRepository taskRepository,
+            MockTaskRepository taskRepository, // TaskRepo 직접 참조 제거 예정
             ReviewRepository reviewRepository,
             ReviewReferenceRepository reviewReferenceRepository,
             ReviewAdditionalReviewerRepository reviewAdditionalReviewerRepository,
@@ -44,7 +44,7 @@ public class ReviewQueryService {
             ReviewResultMapper reviewResultMapper,
             ReviewAuthorizationPort reviewAuthorizationPort
     ) {
-        this.taskRepository = taskRepository;
+        this.taskRepository = taskRepository; // TaskRepo 직접 참조 제거 예정
         this.reviewRepository = reviewRepository;
         this.reviewReferenceRepository = reviewReferenceRepository;
         this.reviewAdditionalReviewerRepository = reviewAdditionalReviewerRepository;
@@ -57,7 +57,10 @@ public class ReviewQueryService {
 
     /**
      * 업무 단위 검토 목록을 조회한다.
+     * 정책 코드: RVW-P-02-001, RVW-P-15-003
      */
+    // TODO 정책 코드: RVW-P-15-004
+    // 검토 목록 조회의 페이징 방식(cursor 또는 offset) 통일이 아직 없다.
     public List<ReviewSummaryResult> findReviewsByTask(Long taskId, ActorContext actor) {
         if (!taskRepository.existsById(taskId)) {
             throw new ReviewDomainException(ReviewErrorCode.TASK_NOT_FOUND);
@@ -68,10 +71,11 @@ public class ReviewQueryService {
                 .filter(review -> canViewReview(review, actor))
                 .map(reviewResultMapper::toSummary)
                 .toList();
-    }
+    } // review 가 task repo를 알면 안되긴한데 task repo 직접 호출가능? 아니면 Task쪽에서 제공? 아니면 상위계층에서 Task 존재검증?
 
     /**
      * 검토 상세를 조회한다.
+     * 정책 코드: RVW-P-02-001, RVW-P-15-001
      */
     public ReviewDetailResult findReview(Long reviewId, ActorContext actor) {
         var review = reviewRepository.findById(reviewId)
@@ -90,7 +94,10 @@ public class ReviewQueryService {
 
     /**
      * 검토 이력을 조회한다.
+     * 정책 코드: RVW-P-02-001, RVW-P-11-007, RVW-P-15-002
      */
+    // TODO 정책 코드: RVW-P-15-004
+    // 감사 로그 조회의 페이징 방식(cursor 또는 offset) 통일이 아직 없다.
     public List<ReviewHistoryResult> findReviewHistories(Long reviewId, ActorContext actor) {
         if (!reviewRepository.existsById(reviewId)) {
             throw new ReviewDomainException(ReviewErrorCode.REVIEW_NOT_FOUND);
@@ -107,6 +114,7 @@ public class ReviewQueryService {
     }
 
     private boolean canViewReview(Review review, ActorContext actor) {
+        // 정책 코드: RVW-P-02-001
         return review.getSubmittedBy().equals(actor.actorId())
                 || reviewReferenceRepository.existsByReview_IdAndUserId(review.getId(), actor.actorId())
                 || reviewAdditionalReviewerRepository.existsByReview_IdAndUserId(review.getId(), actor.actorId())

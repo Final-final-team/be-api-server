@@ -43,6 +43,7 @@ public class ReviewCommentController {
 
     /**
      * 검토 코멘트를 생성한다.
+     * 정책 코드: RVW-P-08-002, RVW-P-08-005
      */
     @PostMapping
     @Operation(summary = "코멘트 생성", description = "검토에 새 코멘트를 등록합니다.")
@@ -67,6 +68,7 @@ public class ReviewCommentController {
 
     /**
      * 검토 코멘트를 수정한다.
+     * 정책 코드: RVW-P-08-003, RVW-P-08-006
      */
     @PatchMapping("/{commentId}")
     @Operation(summary = "코멘트 수정", description = "기존 검토 코멘트의 내용을 수정합니다.")
@@ -93,6 +95,7 @@ public class ReviewCommentController {
 
     /**
      * 검토 코멘트를 삭제한다.
+     * 정책 코드: RVW-P-08-004, RVW-P-08-006, RVW-P-08-008
      */
     @DeleteMapping("/{commentId}")
     @Operation(summary = "코멘트 삭제", description = "검토에 등록된 코멘트를 삭제합니다.")

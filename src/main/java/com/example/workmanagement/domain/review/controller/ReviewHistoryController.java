@@ -34,6 +34,7 @@ public class ReviewHistoryController {
 
     /**
      * 검토 감사 로그 목록을 조회한다.
+     * 정책 코드: RVW-P-11-001, RVW-P-11-007, RVW-P-15-002
      */
     @GetMapping
     @Operation(summary = "검토 이력 조회", description = "검토와 관련된 감사 로그 이력을 조회합니다.")

@@ -9,11 +9,13 @@ public interface ReviewCommentRepository extends JpaRepository<ReviewComment, Lo
 
     /**
      * 검토별 코멘트 목록을 생성 순으로 조회한다.
+     * 정책 코드: RVW-P-15-001
      */
     List<ReviewComment> findAllByReview_IdOrderByCreatedAtAsc(Long reviewId);
 
     /**
      * 검토와 코멘트 식별자로 코멘트를 조회한다.
+     * 정책 코드: RVW-P-08-003, RVW-P-08-004, RVW-P-08-006
      */
     Optional<ReviewComment> findByIdAndReview_Id(Long commentId, Long reviewId);
 }

@@ -41,6 +41,7 @@ public class ReviewReferenceController {
 
     /**
      * 검토 참조자를 추가한다.
+     * 정책 코드: RVW-P-05-002, RVW-P-05-003, RVW-P-05-004, RVW-P-05-005
      */
     @PostMapping
     @Operation(summary = "참조자 추가", description = "검토에 참조자를 추가합니다.")
@@ -68,6 +69,7 @@ public class ReviewReferenceController {
 
     /**
      * 검토 참조자를 제거한다.
+     * 정책 코드: RVW-P-05-002, RVW-P-05-003
      */
     @DeleteMapping("/{userId}")
     @Operation(summary = "참조자 제거", description = "검토에 등록된 참조자를 제거합니다.")

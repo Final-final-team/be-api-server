@@ -43,6 +43,7 @@ public class ReviewAttachmentController {
 
     /**
      * 첨부 업로드용 presigned URL을 발급한다.
+     * 정책 코드: RVW-P-07-001, RVW-P-07-002
      */
     @PostMapping("/presign")
     @Operation(summary = "첨부 업로드 URL 발급", description = "검토 첨부 파일 업로드를 위한 presigned URL을 발급합니다.")
@@ -69,6 +70,7 @@ public class ReviewAttachmentController {
 
     /**
      * 업로드 완료된 첨부를 검토에 확정 반영한다.
+     * 정책 코드: RVW-P-07-001, RVW-P-07-002
      */
     @PostMapping
     @Operation(summary = "첨부 등록 확정", description = "업로드가 완료된 첨부 파일을 검토에 반영합니다.")
@@ -96,6 +98,7 @@ public class ReviewAttachmentController {
 
     /**
      * 검토 첨부를 제거한다.
+     * 정책 코드: RVW-P-07-001, RVW-P-07-002
      */
     @DeleteMapping("/{attachmentId}")
     @Operation(summary = "첨부 삭제", description = "검토에 등록된 첨부 파일을 삭제합니다.")

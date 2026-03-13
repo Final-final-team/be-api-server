@@ -10,16 +10,19 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     /**
      * 업무 기준으로 검토 라운드를 최신순 조회한다.
+     * 정책 코드: RVW-P-00-004, RVW-P-15-003
      */
     List<Review> findAllByTaskIdOrderByRoundNoDesc(Long taskId);
 
     /**
      * 업무의 최신 검토 라운드를 조회한다.
+     * 정책 코드: RVW-P-00-004
      */
     Optional<Review> findFirstByTaskIdOrderByRoundNoDesc(Long taskId);
 
     /**
      * 동일 업무에 제출된 검토가 이미 존재하는지 확인한다.
+     * 정책 코드: RVW-P-00-003
      */
     boolean existsByTaskIdAndStatus(Long taskId, ReviewStatus status);
 }

@@ -102,7 +102,8 @@ public class Review {
 
     /**
      * 상신 상태의 새 검토를 생성한다.
-     */ //taskId 존재 여부 검증 로직 task 도메인 추가되면 추가 예정
+     * 정책 코드: RVW-P-00-003, RVW-P-00-004, RVW-P-01-001
+     */ // 정책 코드: RVW-P-00-002 / taskId 존재 여부 검증 로직은 task 도메인 추가되면 위임 예정
     public static Review submit(Long taskId, Integer roundNo, String content, Long submittedBy) {
         return new Review(taskId, roundNo, content, submittedBy);
     }
@@ -116,6 +117,7 @@ public class Review {
 
     /**
      * 검토 본문을 갱신한다.
+     * 정책 코드: RVW-P-03-002
      */
     public void updateContent(String content) {
         ensureSubmitted(ReviewErrorCode.REVIEW_UPDATE_NOT_ALLOWED);
@@ -151,6 +153,7 @@ public class Review {
 
     /**
      * 검토를 승인 상태로 전환한다.
+     * 정책 코드: RVW-P-01-002
      */
     public void approve(Long actorId, Instant decidedAt) {
         ensureSubmitted(ReviewErrorCode.REVIEW_APPROVAL_NOT_ALLOWED);
@@ -162,6 +165,7 @@ public class Review {
 
     /**
      * 검토를 반려 상태로 전환한다.
+     * 정책 코드: RVW-P-01-003, RVW-P-12-001
      */
     public void reject(Long actorId, String reason, Instant decidedAt) {
         ensureSubmitted(ReviewErrorCode.REVIEW_REJECTION_NOT_ALLOWED);
@@ -173,6 +177,7 @@ public class Review {
 
     /**
      * 검토를 취소 상태로 전환한다.
+     * 정책 코드: RVW-P-01-004, RVW-P-12-002
      */
     public void cancel(Long actorId, Instant cancelledAt) {
         ensureSubmitted(ReviewErrorCode.REVIEW_CANCEL_NOT_ALLOWED);

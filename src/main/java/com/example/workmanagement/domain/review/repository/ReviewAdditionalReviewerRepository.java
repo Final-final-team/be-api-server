@@ -9,21 +9,25 @@ public interface ReviewAdditionalReviewerRepository extends JpaRepository<Review
 
     /**
      * 동일 사용자가 이미 추가 검토자로 등록되어 있는지 확인한다.
+     * 정책 코드: RVW-P-06-005
      */
     boolean existsByReview_IdAndUserId(Long reviewId, Long userId);
 
     /**
      * 검토별 추가 검토자 목록을 생성 순으로 조회한다.
+     * 정책 코드: RVW-P-15-001
      */
     List<ReviewAdditionalReviewer> findAllByReview_IdOrderByCreatedAtAsc(Long reviewId);
 
     /**
      * 검토와 사용자 기준으로 추가 검토자 할당을 조회한다.
+     * 정책 코드: RVW-P-06-003, RVW-P-06-004
      */
     Optional<ReviewAdditionalReviewer> findByReview_IdAndUserId(Long reviewId, Long userId);
 
     /**
      * 검토에 연결된 추가 검토자 수를 조회한다.
+     * 정책 코드: RVW-P-06-006
      */
     long countByReview_Id(Long reviewId);
 }
