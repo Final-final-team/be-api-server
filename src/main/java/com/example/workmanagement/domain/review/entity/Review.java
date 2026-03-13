@@ -125,6 +125,7 @@ public class Review {
     }
 
     private static Integer validateRoundNo(Integer roundNo) {
+        // 정책 코드: RVW-P-00-004 (재상신 시 최대 roundNo + 1)
         if (roundNo == null || roundNo < 1) {
             throw new ReviewDomainException(ReviewErrorCode.REVIEW_VALIDATION_ERROR, "roundNo must be greater than 0");
         }
@@ -132,6 +133,7 @@ public class Review {
     }
 
     private static String validateContent(String content) {
+        // 정책 코드: RVW-P-17-001 (검토 본문 10,000자 이하)
         if (content == null || content.isBlank()) {
             throw new ReviewDomainException(ReviewErrorCode.REVIEW_VALIDATION_ERROR, "content must not be blank");
         }
@@ -142,6 +144,7 @@ public class Review {
     }
 
     private static String validateRejectionReason(String reason) {
+        // 정책 코드: RVW-P-17-002, RVW-P-12-001 (반려 사유 2,000자 이하)
         if (reason == null || reason.isBlank()) {
             throw new ReviewDomainException(ReviewErrorCode.REJECTION_REASON_REQUIRED);
         }
