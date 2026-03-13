@@ -79,7 +79,7 @@ public class ReviewCommandService {
             "image/webp"
     ));
 
-    private final MockTaskRepository taskRepository;
+    private final MockTaskRepository taskRepository; // TaskRepo 직접 참조 제거 예정
     private final ReviewRepository reviewRepository;
     private final ReviewReferenceRepository reviewReferenceRepository;
     private final ReviewAttachmentRepository reviewAttachmentRepository;
@@ -93,7 +93,7 @@ public class ReviewCommandService {
     private final ReviewResultMapper reviewResultMapper;
 
     public ReviewCommandService(
-            MockTaskRepository taskRepository,
+            MockTaskRepository taskRepository, // 정책 코드: RVW-P-00-002, RVW-P-03-001 / TaskRepo 직접 참조 제거 예정
             ReviewRepository reviewRepository,
             ReviewReferenceRepository reviewReferenceRepository,
             ReviewAttachmentRepository reviewAttachmentRepository,
@@ -106,7 +106,7 @@ public class ReviewCommandService {
             ObjectMapper objectMapper,
             ReviewResultMapper reviewResultMapper
     ) {
-        this.taskRepository = taskRepository;
+        this.taskRepository = taskRepository; // 정책 코드: RVW-P-00-002, RVW-P-03-001 / TaskRepo 직접 참조 제거 예정
         this.reviewRepository = reviewRepository;
         this.reviewReferenceRepository = reviewReferenceRepository;
         this.reviewAttachmentRepository = reviewAttachmentRepository;
@@ -122,6 +122,7 @@ public class ReviewCommandService {
 
     /**
      * 최초 상신 또는 재상신용 검토를 생성한다.
+     * 정책 코드: RVW-P-00-002, RVW-P-00-003, RVW-P-00-004, RVW-P-01-001, RVW-P-03-001
      */
     public ReviewDetailResult submitReview(Long taskId, SubmitReviewCommand command, ActorContext actor) {
         MockTask task = loadTask(taskId);
@@ -168,6 +169,7 @@ public class ReviewCommandService {
 
     /**
      * 제출된 검토의 본문을 수정한다.
+     * 정책 코드: RVW-P-03-002
      */
     public ReviewDetailResult updateReview(Long reviewId, Long lockVersion, UpdateReviewCommand command, ActorContext actor) {
         Review review = loadReview(reviewId);
@@ -194,6 +196,7 @@ public class ReviewCommandService {
 
     /**
      * 제출된 검토를 승인한다.
+     * 정책 코드: RVW-P-01-002, RVW-P-03-003, RVW-P-10-001
      */
     public ReviewDetailResult approveReview(Long reviewId, Long lockVersion, ActorContext actor) {
         Review review = loadReview(reviewId);
@@ -222,6 +225,7 @@ public class ReviewCommandService {
 
     /**
      * 제출된 검토를 반려한다.
+     * 정책 코드: RVW-P-01-003, RVW-P-03-004, RVW-P-12-001, RVW-P-10-001
      */
     public ReviewDetailResult rejectReview(
             Long reviewId,
@@ -259,6 +263,7 @@ public class ReviewCommandService {
 
     /**
      * 제출된 검토를 취소한다.
+     * 정책 코드: RVW-P-01-004, RVW-P-03-005, RVW-P-12-002, RVW-P-10-001
      */
     public ReviewDetailResult cancelReview(
             Long reviewId,
@@ -292,6 +297,7 @@ public class ReviewCommandService {
 
     /**
      * 검토 참조자를 추가한다.
+     * 정책 코드: RVW-P-05-002, RVW-P-05-003, RVW-P-05-004, RVW-P-05-005
      */
     public ReviewDetailResult addReference(
             Long reviewId,
@@ -334,6 +340,7 @@ public class ReviewCommandService {
 
     /**
      * 검토 참조자를 제거한다.
+     * 정책 코드: RVW-P-05-002, RVW-P-05-003
      */
     public ReviewDetailResult removeReference(Long reviewId, Long userId, Long lockVersion, ActorContext actor) {
         Review review = loadReview(reviewId);
@@ -365,7 +372,12 @@ public class ReviewCommandService {
 
     /**
      * 첨부 업로드용 presigned URL 응답을 생성한다.
+     * 정책 코드: RVW-P-07-001, RVW-P-07-002, RVW-P-07-003, RVW-P-07-004, RVW-P-07-005, RVW-P-07-006, RVW-P-07-007, RVW-P-07-008
      */
+    // TODO 정책 코드: RVW-P-07-009
+    // presigned URL 실제 스토리지 연동 구현이 아직 없다.
+    // TODO 정책 코드: RVW-P-07-010
+    // 첨부 바이러스 검사 등 보안 검사가 아직 없다.
     public ReviewAttachmentPresignResult createAttachmentPresignUrl(
             Long reviewId,
             Long lockVersion,
@@ -396,6 +408,7 @@ public class ReviewCommandService {
 
     /**
      * 업로드가 끝난 첨부를 검토에 연결한다.
+     * 정책 코드: RVW-P-07-001, RVW-P-07-002, RVW-P-07-003, RVW-P-07-004, RVW-P-07-005, RVW-P-07-006, RVW-P-07-007, RVW-P-07-008
      */
     public ReviewDetailResult confirmAttachment(
             Long reviewId,
@@ -441,6 +454,7 @@ public class ReviewCommandService {
 
     /**
      * 검토 첨부를 제거한다.
+     * 정책 코드: RVW-P-07-001, RVW-P-07-002
      */
     public ReviewDetailResult deleteAttachment(Long reviewId, Long attachmentId, Long lockVersion, ActorContext actor) {
         Review review = loadReview(reviewId);
@@ -473,7 +487,10 @@ public class ReviewCommandService {
 
     /**
      * 검토의 추가 검토자를 할당한다.
+     * 정책 코드: RVW-P-04-001, RVW-P-04-002, RVW-P-04-003, RVW-P-06-001, RVW-P-06-002, RVW-P-06-003, RVW-P-06-004, RVW-P-06-005, RVW-P-06-006
      */
+    // TODO 정책 코드: RVW-P-04-004
+    // 전역 승인/반려 권한 보유자를 추가 검토자로 금지하는 검증이 아직 없다.
     public ReviewDetailResult addAdditionalReviewer(
             Long reviewId,
             AssignAdditionalReviewerCommand command,
@@ -513,6 +530,7 @@ public class ReviewCommandService {
 
     /**
      * 검토의 추가 검토자 할당을 해제한다.
+     * 정책 코드: RVW-P-06-003, RVW-P-06-004
      */
     public ReviewDetailResult removeAdditionalReviewer(
             Long reviewId,
@@ -547,6 +565,7 @@ public class ReviewCommandService {
 
     /**
      * 검토 코멘트를 생성한다.
+     * 정책 코드: RVW-P-08-002, RVW-P-08-005
      */
     public ReviewDetailResult addComment(Long reviewId, CreateCommentCommand command, ActorContext actor) {
         Review review = loadReview(reviewId);
@@ -575,6 +594,7 @@ public class ReviewCommandService {
 
     /**
      * 검토 코멘트를 수정한다.
+     * 정책 코드: RVW-P-08-003, RVW-P-08-006, RVW-P-08-007
      */
     public ReviewDetailResult updateComment(
             Long reviewId,
@@ -613,6 +633,7 @@ public class ReviewCommandService {
 
     /**
      * 검토 코멘트를 삭제한다.
+     * 정책 코드: RVW-P-08-004, RVW-P-08-006, RVW-P-08-008, RVW-P-11-009
      */
     public ReviewDetailResult deleteComment(Long reviewId, Long commentId, ActorContext actor) {
         Review review = loadReview(reviewId);
@@ -649,11 +670,12 @@ public class ReviewCommandService {
 
     /**
      * 업무 식별자로 업무를 조회한다.
+     * 정책 코드: RVW-P-00-002, RVW-P-03-001
      */
     private MockTask loadTask(Long taskId) {
         return taskRepository.findById(taskId)
                 .orElseThrow(() -> new ReviewDomainException(ReviewErrorCode.TASK_NOT_FOUND));
-    }
+    } // 정책 코드: RVW-P-00-002, RVW-P-03-001 / 해당 로직은 Task쪽에 있는 것이 맞다고 판단, 추후 Task 쪽 추가되면 삭제 예정
 
     /**
      * 검토 식별자로 검토를 조회한다.
@@ -706,10 +728,11 @@ public class ReviewCommandService {
 
     /**
      * 요청자가 업무 작성자인지 확인한다.
+     * 정책 코드: RVW-P-03-001
      */
     private boolean isTaskAuthor(MockTask task, ActorContext actor) {
         return Objects.equals(task.getAuthorId(), actor.actorId());
-    }
+    } // 정책 코드: RVW-P-03-001 / 업무 작성자인지에 대한 판별도 Task에서 하는거로 추후 수정
 
     /**
      * 요청자가 검토 제출자인지 확인한다.
@@ -741,6 +764,7 @@ public class ReviewCommandService {
 
     /**
      * 코멘트 작성 권한과 검토별 예외 허용 조건을 함께 검증한다.
+     * 정책 코드: RVW-P-02-001, RVW-P-08-002
      */
     private boolean canCreateComment(Review review, ActorContext actor) {
         return isSubmitter(review, actor)
@@ -923,6 +947,8 @@ public class ReviewCommandService {
     /**
      * 감사 로그 엔티티와 인프라 로그를 함께 기록한다.
      */
+    // TODO 정책 코드: RVW-P-11-010
+    // action별 metadata key 표준 강제 로직이 아직 없다.
     private void recordHistory(
             Review review,
             ReviewHistoryActionType actionType,

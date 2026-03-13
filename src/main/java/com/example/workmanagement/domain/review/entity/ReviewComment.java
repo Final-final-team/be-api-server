@@ -90,6 +90,7 @@ public class ReviewComment {
 
     /**
      * 코멘트 본문을 수정하고 편집 표시를 남긴다.
+     * 정책 코드: RVW-P-08-003, RVW-P-08-006, RVW-P-08-010
      */
     public void updateContent(String content, Instant editedAt) {
         if (isDeleted()) {
@@ -102,6 +103,7 @@ public class ReviewComment {
 
     /**
      * 코멘트를 소프트 삭제 상태로 전환한다.
+     * 정책 코드: RVW-P-08-004, RVW-P-08-008
      */
     public void delete(Long deletedBy, Instant deletedAt) {
         if (isDeleted()) {
