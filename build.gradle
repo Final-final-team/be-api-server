@@ -18,27 +18,34 @@ repositories {
 }
 
 dependencies {
+
+    // web
     implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    // security
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+
+    // docs
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
 
-    implementation 'org.projectlombok:lombok'
-    annotationProcessor("org.projectlombok:lombok")
-    testAnnotationProcessor("org.projectlombok:lombok")
-
+    // logging
     implementation("net.logstash.logback:logstash-logback-encoder:8.0")
 
-    implementation 'org.projectlombok:lombok'
-    annotationProcessor("org.projectlombok:lombok")
-    testAnnotationProcessor("org.projectlombok:lombok")
-
-    implementation("net.logstash.logback:logstash-logback-encoder:8.0")
-
+    // DB
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    testImplementation 'org.springframework.security:spring-security-test'
     runtimeOnly 'org.postgresql:postgresql'
 
+    // test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'com.h2database:h2'
+
+    // lombok
+    implementation 'org.projectlombok:lombok'
+    annotationProcessor("org.projectlombok:lombok")
+    testAnnotationProcessor("org.projectlombok:lombok")
 }
 
 tasks.named('test') {
