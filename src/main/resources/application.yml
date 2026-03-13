@@ -28,7 +28,7 @@ spring:
       client:
         registration:
           google:
-            # 최초 진입 경로 기본 값: /oauth2/authorization
+            # 최초 진입 경로 기본 값: /oauth2/authorization/{registrationId}
             # redirect-uri(필터 주소) 기본 값: {baseUrl}/{action}/oauth2/code/{registrationId}
             # redirect-uri(provider 에 전송) 기본 값: /login/oauth2/code/*
             client-id: ${GOOGLE_CLIENT_ID}
