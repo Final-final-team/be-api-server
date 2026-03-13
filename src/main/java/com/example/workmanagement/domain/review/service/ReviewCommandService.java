@@ -32,8 +32,8 @@ import com.example.workmanagement.domain.review.service.result.ReviewAttachmentP
 import com.example.workmanagement.domain.review.service.result.ReviewDetailResult;
 import com.example.workmanagement.domain.review.error.ReviewErrorCode;
 import com.example.workmanagement.domain.task.entity.Task;
-import com.example.workmanagement.domain.task.entity.TaskStatus;
-import com.example.workmanagement.domain.task.repository.TaskRepository;
+import com.example.workmanagement.domain.task.entity.MockTaskStatus;
+import com.example.workmanagement.domain.task.repository.MockTaskRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
@@ -79,7 +79,7 @@ public class ReviewCommandService {
             "image/webp"
     ));
 
-    private final TaskRepository taskRepository;
+    private final MockTaskRepository taskRepository;
     private final ReviewRepository reviewRepository;
     private final ReviewReferenceRepository reviewReferenceRepository;
     private final ReviewAttachmentRepository reviewAttachmentRepository;
@@ -93,7 +93,7 @@ public class ReviewCommandService {
     private final ReviewResultMapper reviewResultMapper;
 
     public ReviewCommandService(
-            TaskRepository taskRepository,
+            MockTaskRepository taskRepository,
             ReviewRepository reviewRepository,
             ReviewReferenceRepository reviewReferenceRepository,
             ReviewAttachmentRepository reviewAttachmentRepository,
@@ -126,7 +126,7 @@ public class ReviewCommandService {
     public ReviewDetailResult submitReview(Long taskId, SubmitReviewCommand command, ActorContext actor) {
         Task task = loadTask(taskId);
 
-        if (task.getStatus() != TaskStatus.IN_PROGRESS) {
+        if (task.getStatus() != MockTaskStatus.IN_PROGRESS) {
             throw new ReviewDomainException(ReviewErrorCode.REVIEW_SUBMIT_NOT_ALLOWED);
         }
 

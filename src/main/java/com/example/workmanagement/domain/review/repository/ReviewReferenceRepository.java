@@ -21,4 +21,9 @@ public interface ReviewReferenceRepository extends JpaRepository<ReviewReference
      * 검토와 사용자 기준으로 참조자를 조회한다.
      */
     Optional<ReviewReference> findByReview_IdAndUserId(Long reviewId, Long userId);
+
+    /**
+     * 검토에 연결된 참조자 수를 조회한다.
+     */
+    long countByReview_Id(Long reviewId);
 }

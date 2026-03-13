@@ -21,4 +21,9 @@ public interface ReviewAdditionalReviewerRepository extends JpaRepository<Review
      * 검토와 사용자 기준으로 추가 검토자 할당을 조회한다.
      */
     Optional<ReviewAdditionalReviewer> findByReview_IdAndUserId(Long reviewId, Long userId);
+
+    /**
+     * 검토에 연결된 추가 검토자 수를 조회한다.
+     */
+    long countByReview_Id(Long reviewId);
 }

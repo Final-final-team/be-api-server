@@ -14,7 +14,7 @@ import com.example.workmanagement.domain.review.service.result.ReviewDetailResul
 import com.example.workmanagement.domain.review.service.result.ReviewHistoryResult;
 import com.example.workmanagement.domain.review.service.result.ReviewSummaryResult;
 import com.example.workmanagement.domain.review.error.ReviewErrorCode;
-import com.example.workmanagement.domain.task.repository.TaskRepository;
+import com.example.workmanagement.domain.task.repository.MockTaskRepository;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class ReviewQueryService {
 
-    private final TaskRepository taskRepository;
+    private final MockTaskRepository taskRepository;
     private final ReviewRepository reviewRepository;
     private final ReviewReferenceRepository reviewReferenceRepository;
     private final ReviewAdditionalReviewerRepository reviewAdditionalReviewerRepository;
@@ -34,7 +34,7 @@ public class ReviewQueryService {
     private final ReviewAuthorizationPort reviewAuthorizationPort;
 
     public ReviewQueryService(
-            TaskRepository taskRepository,
+            MockTaskRepository taskRepository,
             ReviewRepository reviewRepository,
             ReviewReferenceRepository reviewReferenceRepository,
             ReviewAdditionalReviewerRepository reviewAdditionalReviewerRepository,

@@ -16,4 +16,9 @@ public interface ReviewAttachmentRepository extends JpaRepository<ReviewAttachme
      * 검토와 첨부 식별자로 첨부를 조회한다.
      */
     Optional<ReviewAttachment> findByIdAndReview_Id(Long attachmentId, Long reviewId);
+
+    /**
+     * 검토에 연결된 첨부 수를 조회한다.
+     */
+    long countByReview_Id(Long reviewId);
 }

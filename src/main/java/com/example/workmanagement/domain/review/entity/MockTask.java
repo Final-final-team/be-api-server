@@ -1,4 +1,4 @@
-package com.example.workmanagement.domain.task.entity;
+package com.example.workmanagement.domain.review.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -16,7 +16,7 @@ import lombok.Getter;
 @Getter
 @Entity
 @Table(name = "tasks")
-public class Task {
+public class MockTask {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,21 +27,21 @@ public class Task {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
-    private TaskStatus status = TaskStatus.TODO;
+    private MockTaskStatus status = MockTaskStatus.TODO;
 
-    protected Task() {
+    protected MockTask() {
     }
 
     public void markInProgress() {
-        this.status = TaskStatus.IN_PROGRESS;
+        this.status = MockTaskStatus.IN_PROGRESS;
     }
 
     public void markInReview() {
-        this.status = TaskStatus.IN_REVIEW;
+        this.status = MockTaskStatus.IN_REVIEW;
     }
 
     public void markCompleted() {
-        this.status = TaskStatus.COMPLETED;
+        this.status = MockTaskStatus.COMPLETED;
     }
 
     public void setAuthorId(Long authorId) {
