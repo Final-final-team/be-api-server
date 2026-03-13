@@ -114,6 +114,7 @@ public class ReviewComment {
     }
 
     private static String validateContent(String content) {
+        // 정책 코드: RVW-P-08-007 (코멘트 본문 1,000자 이하)
         if (content == null || content.isBlank()) {
             throw new ReviewDomainException(
                     ReviewErrorCode.REVIEW_VALIDATION_ERROR,

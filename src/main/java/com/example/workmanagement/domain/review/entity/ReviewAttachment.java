@@ -92,6 +92,7 @@ public class ReviewAttachment {
     }
 
     private static String validateOriginalName(String originalName) {
+        // 정책 코드: RVW-P-07-006 (파일명 255자 이하)
         if (originalName == null || originalName.isBlank()) {
             throw new ReviewDomainException(ReviewErrorCode.REVIEW_VALIDATION_ERROR, "originalName must not be blank");
         }
@@ -105,6 +106,7 @@ public class ReviewAttachment {
     }
 
     private static Long validateSizeBytes(Long sizeBytes) {
+        // 정책 코드: RVW-P-07-004 (파일당 최대 20MB)
         if (sizeBytes == null || sizeBytes <= 0) {
             throw new ReviewDomainException(ReviewErrorCode.REVIEW_VALIDATION_ERROR, "sizeBytes must be positive");
         }
