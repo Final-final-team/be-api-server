@@ -26,8 +26,8 @@ import java.time.Instant;
 
 @Entity
 @Table(name = "project_members",
-       uniqueConstraints = @UniqueConstraint(columnNames = {"project_id", "member_id"}),
-       indexes = @Index(name = "idx_project_member_member_id", columnList = "member_id"))
+       uniqueConstraints = @UniqueConstraint(columnNames = {"project_id", "user_id"}),
+       indexes = @Index(name = "idx_project_member_user_id", columnList = "user_id"))
 @EntityListeners(AuditingEntityListener.class)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -40,15 +40,15 @@ public class ProjectMember {
     @Column(name = "project_id", nullable = false)
     private Long projectId;
 
-    @Column(name = "member_id", nullable = false)
-    private Long memberId;
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
 
     // TODO: Role 정보 추가(EntityGraph로 조회 최적화 필요?)
     // 실제 구현 시 1.role entity 추가, 2.role과 member 간 N:M 관계 설정, 3.프로젝트 멤버 조회 시 role 정보도 함께 조회하도록 구현 필요(EntityGraph 활용)
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20, nullable = false)
-    private MemberStatus status = MemberStatus.ACTIVE; // 탈퇴시 INACTIVE로 변경,재가입시 ACTIVE로 변경
+    private ProjectMemberStatus status = ProjectMemberStatus.ACTIVE; // 탈퇴시 INACTIVE로 변경,재가입시 ACTIVE로 변경
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -59,22 +59,23 @@ public class ProjectMember {
     private Instant updatedAt;
 
     @Builder
-    public ProjectMember(Long memberId) {
-        this.memberId = memberId;
-        this.status = MemberStatus.ACTIVE;
+    public ProjectMember(Long projectId, Long userId) {
+        this.projectId = projectId;
+        this.userId = userId;
+        this.status = ProjectMemberStatus.ACTIVE;
     }
 
-    public void fire_member() {
-        if (this.status == MemberStatus.INACTIVE) {
+    public void FireMember() {
+        if (this.status == ProjectMemberStatus.INACTIVE) {
             throw new ProjectDomainException(ProjectErrorCode.PROJECT_MEMBER_ALREADY_INACTIVE);
         }
-        this.status = MemberStatus.INACTIVE;
+        this.status = ProjectMemberStatus.INACTIVE;
     }
 
-    public void reinstate_member() {
-        if (this.status == MemberStatus.ACTIVE) {
+    public void ReinstateMember() {
+        if (this.status == ProjectMemberStatus.ACTIVE) {
             throw new ProjectDomainException(ProjectErrorCode.PROJECT_MEMBER_ALREADY_EXISTS);
         }
-        this.status = MemberStatus.ACTIVE;
+        this.status = ProjectMemberStatus.ACTIVE;
     }
 }
