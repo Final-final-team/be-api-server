@@ -1,12 +1,15 @@
 spring:
+
   application:
     name: be-api-server
+
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     hikari:
       initialization-fail-timeout: -1
+
   jpa:
     # open-in-view: false 설정 이유를 따로 정리해야 할 것 같음
     open-in-view: false
@@ -19,6 +22,22 @@ spring:
         jdbc:
           time_zone: UTC
     database-platform: org.hibernate.dialect.PostgreSQLDialect
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            # 최초 진입 경로 기본 값: /oauth2/authorization/{registrationId}
+            # redirect-uri(필터 주소) 기본 값: {baseUrl}/{action}/oauth2/code/{registrationId}
+            # redirect-uri(provider 에 전송) 기본 값: /login/oauth2/code/*
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            client-authentication-method: client_secret_post
+            authorization-grant-type: authorization_code
+            scope:
+              - openid
+              - email
 
 springdoc:
   swagger-ui:
