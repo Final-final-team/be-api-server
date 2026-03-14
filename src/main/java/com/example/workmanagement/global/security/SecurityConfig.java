@@ -1,4 +1,4 @@
-package com.example.workmanagement.global.auth.config;
+package com.example.workmanagement.global.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
