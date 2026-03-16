@@ -43,7 +43,7 @@ public class ConsentTerm {
     private Long id;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
+    @Column(nullable = false, length = ConsentConstants.MAX_CONSENT_CODE_LENGTH)
     private ConsentType type;
 
     @Column(nullable = false, length = ConsentConstants.MAX_CODE_LENGTH)
