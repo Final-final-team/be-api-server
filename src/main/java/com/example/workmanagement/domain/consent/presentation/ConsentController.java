@@ -41,6 +41,8 @@ public class ConsentController {
         this.consentService = consentService;
     }
 
+    // ----- handlers
+
     @GetMapping
     @Operation(summary = "내 동의 현황 조회", description = "최신 버전 동의 항목 기준으로 동의 여부를 조회합니다.")
     public ResponseEntity<ApiResponse<List<ConsentStatusResult>>> getMyConsentStatuses(
@@ -48,7 +50,9 @@ public class ConsentController {
     ) {
         // subject 문자열을 도메인에서 쓰는 userId(Long)로 변환
         Long userId = resolveUserId(jwt);
-        return ResponseEntity.ok(ApiResponse.success(consentService.getConsentStatuses(userId)));
+
+        List<ConsentStatusResult> result = consentService.getConsentStatuses(userId);
+        return ResponseEntity.ok(ApiResponse.success(result));
     }
 
     @GetMapping("/required/check")
@@ -58,7 +62,9 @@ public class ConsentController {
     ) {
         // 필수 동의 충족 여부만 빠르게 조회 (콜백 분기/게이트 판단 공용)
         Long userId = resolveUserId(jwt);
-        return ResponseEntity.ok(ApiResponse.success(consentService.checkRequiredConsents(userId)));
+
+        RequiredConsentCheckResult result = consentService.checkRequiredConsents(userId);
+        return ResponseEntity.ok(ApiResponse.success(result));
     }
 
     @PostMapping
@@ -76,8 +82,11 @@ public class ConsentController {
                         .toList()
         );
 
-        return ResponseEntity.ok(ApiResponse.success(consentService.submitConsents(userId, command)));
+        ConsentSubmitResult result = consentService.submitConsents(userId, command);
+        return ResponseEntity.ok(ApiResponse.success(result));
     }
+
+    // ----- helpers
 
     /**
      * 인증 주체를 userId로 해석한다.
