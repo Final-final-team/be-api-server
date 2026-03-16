@@ -8,6 +8,9 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+// To Do: 이 클래스는 동의 항목 관련해서 개발환경에서 편하게 테스트해볼 목적으로 만들어졌음.
+//          나중에는 별도의 동의 항목을 관리하는 백오피스 기능이 필요함.
+
 @Component
 public class ConsentCatalogInitializer implements ApplicationRunner {
 
@@ -24,7 +27,7 @@ public class ConsentCatalogInitializer implements ApplicationRunner {
                 ConsentType.PERSONAL_INFO_COLLECTION_AND_USE,
                 "PERSONAL_INFO_BASE",
                 "개인정보 수집·이용 동의",
-                "수집 항목(이메일, 이름, 프로필 정보), 이용 목적(회원 식별, 서비스 제공), 보관 기간(회원 탈퇴 시 또는 관련 법령 보관 기간) 등에 동의합니다.",
+                "수집 항목(이메일, 이름, 프로필 정보), 이용 목적(회원 식별, 서비스 제공), 보관 기간(회원 탈퇴 까지)에 동의합니다.",
                 true,
                 1
         );
@@ -43,15 +46,6 @@ public class ConsentCatalogInitializer implements ApplicationRunner {
                 "SERVICE_USE_GENERAL",
                 "서비스 이용 약관 동의",
                 "서비스 이용 조건, 계정 관리 책임, 금지 행위, 서비스 제한/종료 조건에 대한 약관에 동의합니다.",
-                true,
-                1
-        );
-
-        createIfAbsent(
-                ConsentType.SERVICE_USE_POLICY,
-                "SERVICE_USE_PAYMENT",
-                "유료 서비스 및 결제 정책 동의",
-                "유료 기능 이용 시 결제·환불·청약철회·과금 정책과 제공 조건을 확인하고 동의합니다.",
                 true,
                 1
         );
