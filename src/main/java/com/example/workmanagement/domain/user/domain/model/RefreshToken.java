@@ -1,5 +1,7 @@
 package com.example.workmanagement.domain.user.domain.model;
 
+import com.example.workmanagement.domain.user.exception.UserDomainException;
+import com.example.workmanagement.domain.user.exception.UserErrorCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -12,13 +14,18 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
 import java.time.Instant;
 
+/**
+ * refresh token 저장 엔티티.
+ *
+ * 보안상 원문 토큰은 저장하지 않고 해시값만 저장한다.
+ * user_id unique 제약으로 사용자당 1개 토큰 정책을 강제한다.
+ */
 @Entity
 @Table(
         uniqueConstraints = @UniqueConstraint(name = "uk_refresh_user", columnNames = "user_id"),
@@ -51,7 +58,6 @@ public class RefreshToken {
 
     // ----- constructors
 
-    @Builder
     private RefreshToken(
             Long id,
             User user,
@@ -79,16 +85,21 @@ public class RefreshToken {
             String tokenHash,
             long ttlInSec
     ) {
+        // 만료시간은 발급 시점 + TTL로 계산
+        if (ttlInSec <= 0) {
+            throw new UserDomainException(UserErrorCode.USER_INVALID_ARGUMENT, "리프레시 토큰 TTL은 0보다 커야 합니다.");
+        }
 
         Instant issuedAt = Instant.now();
         Instant expiresAt = issuedAt.plusSeconds(ttlInSec);
 
-        return RefreshToken.builder()
-                .user(user)
-                .tokenHash(tokenHash)
-                .issuedAt(issuedAt)
-                .expiresAt(expiresAt)
-                .build();
+        return new RefreshToken(
+                null,
+                user,
+                tokenHash,
+                issuedAt,
+                expiresAt
+        );
     }
 
     public static RefreshToken rebuild(
@@ -97,31 +108,56 @@ public class RefreshToken {
             Instant issuedAt,
             Instant expiresAt
     ) {
-
-        return RefreshToken.builder()
-                .user(user)
-                .tokenHash(tokenHash)
-                .issuedAt(issuedAt)
-                .expiresAt(expiresAt)
-                .build();
+        // 테스트/복원 용도로 시각을 외부에서 주입 가능하게 둔다.
+        return new RefreshToken(
+                null,
+                user,
+                tokenHash,
+                issuedAt,
+                expiresAt
+        );
     }
 
     // ----- validators
 
     private static void validateId(Long id) {
-        // null 허용
-        // To Do: 유효하지 않으면 예외 발생
+        if (id != null && id <= 0) {
+            throw new UserDomainException(UserErrorCode.USER_INVALID_ARGUMENT, "리프레시 토큰 식별자는 양수여야 합니다.");
+        }
     }
 
     private static void validateUser(User user) {
-        // To Do: 유효하지 않으면 예외 발생
+        if (user == null) {
+            throw new UserDomainException(UserErrorCode.USER_INVALID_ARGUMENT, "리프레시 토큰의 회원 정보는 필수입니다.");
+        }
     }
 
     private static void validateTokenHash(String tokenHash) {
-        // To Do: 유효하지 않으면 예외 발생
+        if (tokenHash == null || tokenHash.isBlank()) {
+            throw new UserDomainException(UserErrorCode.USER_INVALID_ARGUMENT, "리프레시 토큰 해시는 비어 있을 수 없습니다.");
+        }
+        if (tokenHash.length() != 64) {
+            throw new UserDomainException(UserErrorCode.USER_INVALID_ARGUMENT, "리프레시 토큰 해시는 64자여야 합니다.");
+        }
+        if (!tokenHash.matches("^[0-9a-fA-F]{64}$")) {
+            throw new UserDomainException(UserErrorCode.USER_INVALID_ARGUMENT, "리프레시 토큰 해시는 16진수 문자열이어야 합니다.");
+        }
     }
 
     private static void validateTimes(Instant issuedAt, Instant expiresAt) {
-        // To Do: 유효하지 않으면 예외 발생
+        if (issuedAt == null || expiresAt == null) {
+            throw new UserDomainException(UserErrorCode.USER_INVALID_ARGUMENT, "리프레시 토큰 시각 정보는 null일 수 없습니다.");
+        }
+        if (!expiresAt.isAfter(issuedAt)) {
+            throw new UserDomainException(UserErrorCode.USER_INVALID_ARGUMENT, "리프레시 토큰 만료시각은 발급시각 이후여야 합니다.");
+        }
+    }
+
+    public User user() {
+        return user;
+    }
+
+    public Instant expiresAt() {
+        return expiresAt;
     }
 }
