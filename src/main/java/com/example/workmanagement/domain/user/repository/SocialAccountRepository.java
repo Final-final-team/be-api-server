@@ -9,4 +9,6 @@ import java.util.Optional;
 public interface SocialAccountRepository extends JpaRepository<SocialAccount, Long> {
 
     Optional<SocialAccount> findByProviderAndSub(AuthProvider provider, String sub);
+
+    void deleteAllByUser_Id(Long userId);
 }
