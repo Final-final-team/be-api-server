@@ -72,7 +72,7 @@ public class ConsentController {
         // API DTO를 서비스용 커맨드로 변환해 계층 의존을 분리
         SubmitConsentsCommand command = new SubmitConsentsCommand(
                 request.agreements().stream()
-                        .map(item -> new SubmitConsentsCommand.Agreement(item.code(), item.version(), item.agreed()))
+                        .map(item -> new SubmitConsentsCommand.Agreement(item.type(), item.code(), item.version(), item.agreed()))
                         .toList()
         );
 

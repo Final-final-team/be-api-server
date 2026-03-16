@@ -1,10 +1,10 @@
 package com.example.workmanagement.domain.consent.service;
 
-import com.example.workmanagement.domain.consent.domain.model.ConsentItem;
+import com.example.workmanagement.domain.consent.domain.model.ConsentTerm;
 import com.example.workmanagement.domain.consent.domain.model.enums.ConsentType;
 import com.example.workmanagement.domain.consent.exception.ConsentErrorCode;
 import com.example.workmanagement.domain.consent.exception.ConsentDomainException;
-import com.example.workmanagement.domain.consent.repository.ConsentItemRepository;
+import com.example.workmanagement.domain.consent.repository.ConsentTermRepository;
 import com.example.workmanagement.domain.consent.repository.UserConsentRepository;
 import com.example.workmanagement.domain.consent.service.command.SubmitConsentsCommand;
 import com.example.workmanagement.domain.consent.service.result.ConsentSubmitResult;
@@ -32,36 +32,36 @@ class ConsentServiceDataJpaTest {
     private ConsentRequirementService consentRequirementService;
 
     @Autowired
-    private ConsentItemRepository consentItemRepository;
+    private ConsentTermRepository consentTermRepository;
 
     @Autowired
     private UserConsentRepository userConsentRepository;
 
     private Long userId;
-    private ConsentItem requiredConsentV1;
-    private ConsentItem optionalConsentV1;
+    private ConsentTerm requiredConsentV1;
+    private ConsentTerm optionalConsentV1;
 
     @BeforeEach
     void setUp() {
         userConsentRepository.deleteAll();
-        consentItemRepository.deleteAll();
+        consentTermRepository.deleteAll();
         userId = 1L;
 
-        requiredConsentV1 = consentItemRepository.save(
-                ConsentItem.createNew(
-                        "PERSONAL_INFO_COLLECTION_AND_USE",
-                        ConsentType.PERSONAL_INFO,
+        requiredConsentV1 = consentTermRepository.save(
+                ConsentTerm.createNew(
+                        ConsentType.PERSONAL_INFO_COLLECTION_AND_USE,
+                        "PERSONAL_INFO_BASE",
                         "개인정보 수집·이용 동의",
-                        "테스트용 필수 동의",
+                        "테스트용 필수 동의(수집 항목/이용 목적/보관 기간 포함)",
                         true,
                         1
                 )
         );
 
-        optionalConsentV1 = consentItemRepository.save(
-                ConsentItem.createNew(
+        optionalConsentV1 = consentTermRepository.save(
+                ConsentTerm.createNew(
+                        ConsentType.SERVICE_USE_POLICY,
                         "MARKETING_OPTIONAL",
-                        ConsentType.SERVICE_USE,
                         "마케팅 정보 수신 동의",
                         "테스트용 선택 동의",
                         false,
@@ -83,7 +83,12 @@ class ConsentServiceDataJpaTest {
         ConsentSubmitResult submitResult = consentService.submitConsents(
                 userId,
                 new SubmitConsentsCommand(
-                        List.of(new SubmitConsentsCommand.Agreement(requiredConsentV1.code(), requiredConsentV1.version(), true))
+                        List.of(new SubmitConsentsCommand.Agreement(
+                                requiredConsentV1.type(),
+                                requiredConsentV1.code(),
+                                requiredConsentV1.version(),
+                                true
+                        ))
                 )
         );
 
@@ -94,13 +99,13 @@ class ConsentServiceDataJpaTest {
 
     @Test
     void submitNonLatestVersion_thenThrowsConflict() {
-        consentItemRepository.save(
-                ConsentItem.createNew(
-                        requiredConsentV1.code(),
+        consentTermRepository.save(
+                ConsentTerm.createNew(
                         requiredConsentV1.type(),
-                        requiredConsentV1.name(),
+                        requiredConsentV1.code(),
+                        requiredConsentV1.title(),
                         requiredConsentV1.description(),
-                        requiredConsentV1.required(),
+                        requiredConsentV1.isRequired(),
                         2
                 )
         );
@@ -110,7 +115,12 @@ class ConsentServiceDataJpaTest {
                 () -> consentService.submitConsents(
                         userId,
                         new SubmitConsentsCommand(
-                                List.of(new SubmitConsentsCommand.Agreement(requiredConsentV1.code(), 1, true))
+                                List.of(new SubmitConsentsCommand.Agreement(
+                                        requiredConsentV1.type(),
+                                        requiredConsentV1.code(),
+                                        1,
+                                        true
+                                ))
                         )
                 )
         );
@@ -123,7 +133,12 @@ class ConsentServiceDataJpaTest {
         ConsentSubmitResult submitResult = consentService.submitConsents(
                 userId,
                 new SubmitConsentsCommand(
-                        List.of(new SubmitConsentsCommand.Agreement(optionalConsentV1.code(), optionalConsentV1.version(), true))
+                        List.of(new SubmitConsentsCommand.Agreement(
+                                optionalConsentV1.type(),
+                                optionalConsentV1.code(),
+                                optionalConsentV1.version(),
+                                true
+                        ))
                 )
         );
 

@@ -1,7 +1,7 @@
 package com.example.workmanagement.domain.consent.service;
 
-import com.example.workmanagement.domain.consent.domain.model.ConsentItem;
-import com.example.workmanagement.domain.consent.repository.ConsentItemRepository;
+import com.example.workmanagement.domain.consent.domain.model.ConsentTerm;
+import com.example.workmanagement.domain.consent.repository.ConsentTermRepository;
 import com.example.workmanagement.domain.consent.repository.UserConsentRepository;
 import com.example.workmanagement.domain.consent.service.result.RequiredConsentCheckResult;
 import org.springframework.stereotype.Service;
@@ -21,36 +21,36 @@ import java.util.stream.Collectors;
  */
 public class ConsentRequirementService {
 
-    private final ConsentItemRepository consentItemRepository;
+    private final ConsentTermRepository consentTermRepository;
     private final UserConsentRepository userConsentRepository;
 
     public ConsentRequirementService(
-            ConsentItemRepository consentItemRepository,
+            ConsentTermRepository consentTermRepository,
             UserConsentRepository userConsentRepository
     ) {
-        this.consentItemRepository = consentItemRepository;
+        this.consentTermRepository = consentTermRepository;
         this.userConsentRepository = userConsentRepository;
     }
 
     public RequiredConsentCheckResult evaluate(Long userId) {
         // 필수 + 최신 항목만 대상으로 본다.
-        List<ConsentItem> requiredLatestItems = consentItemRepository.findAllLatestRequired();
-        if (requiredLatestItems.isEmpty()) {
+        List<ConsentTerm> requiredLatestTerms = consentTermRepository.findAllLatestRequired();
+        if (requiredLatestTerms.isEmpty()) {
             // 운영 정책상 필수 항목이 아직 없다면 접근은 허용
             return new RequiredConsentCheckResult(true, List.of());
         }
 
         // 사용자가 동의한 필수 항목 id 집합
-        Set<Long> agreedConsentItemIds = userConsentRepository
-                .findAllByUserIdAndConsentItemIn(userId, requiredLatestItems)
+        Set<Long> agreedConsentTermIds = userConsentRepository
+                .findAllByUserIdAndConsentTermIn(userId, requiredLatestTerms)
                 .stream()
-                .map(userConsent -> userConsent.consentItem().id())
+                .map(userConsent -> userConsent.consentTerm().id())
                 .collect(Collectors.toSet());
 
-        // 빠진 필수 항목 코드를 계산해 API/필터 에러 응답에 그대로 사용한다.
-        List<String> missingRequiredCodes = requiredLatestItems.stream()
-                .filter(item -> !agreedConsentItemIds.contains(item.id()))
-                .map(ConsentItem::code)
+        // 빠진 필수 동의 항목 code를 계산해 API/필터 에러 응답에 그대로 사용한다.
+        List<String> missingRequiredCodes = requiredLatestTerms.stream()
+                .filter(term -> !agreedConsentTermIds.contains(term.id()))
+                .map(ConsentTerm::code)
                 .toList();
 
         return new RequiredConsentCheckResult(

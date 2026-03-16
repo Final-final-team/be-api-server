@@ -8,43 +8,50 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class ConsentInvariantTest {
 
     @Test
-    void consentItemCreate_blankCode_shouldFail() {
+    void consentTermCreate_blankTitle_shouldFail() {
         assertThrows(
-                IllegalArgumentException.class,
-                () -> ConsentItem.createNew("", ConsentType.PERSONAL_INFO, "name", "desc", true, 1)
+                com.example.workmanagement.domain.consent.exception.ConsentDomainException.class,
+                () -> ConsentTerm.createNew(ConsentType.PERSONAL_INFO_COLLECTION_AND_USE, "PERSONAL_INFO_BASE", "", "desc", true, 1)
         );
     }
 
     @Test
-    void consentItemCreate_nullType_shouldFail() {
+    void consentTermCreate_nullType_shouldFail() {
         assertThrows(
-                IllegalArgumentException.class,
-                () -> ConsentItem.createNew("CODE", null, "name", "desc", true, 1)
+                com.example.workmanagement.domain.consent.exception.ConsentDomainException.class,
+                () -> ConsentTerm.createNew(null, "PERSONAL_INFO_BASE", "title", "desc", true, 1)
         );
     }
 
     @Test
-    void consentItemCreate_nonPositiveVersion_shouldFail() {
+    void consentTermCreate_nonPositiveVersion_shouldFail() {
         assertThrows(
-                IllegalArgumentException.class,
-                () -> ConsentItem.createNew("CODE", ConsentType.PERSONAL_INFO, "name", "desc", true, 0)
+                com.example.workmanagement.domain.consent.exception.ConsentDomainException.class,
+                () -> ConsentTerm.createNew(ConsentType.PERSONAL_INFO_COLLECTION_AND_USE, "PERSONAL_INFO_BASE", "title", "desc", true, 0)
         );
     }
 
     @Test
     void userConsentCreate_nonPositiveUserId_shouldFail() {
-        ConsentItem item = ConsentItem.createNew("CODE", ConsentType.PERSONAL_INFO, "name", "desc", true, 1);
+        ConsentTerm term = ConsentTerm.createNew(
+                ConsentType.PERSONAL_INFO_COLLECTION_AND_USE,
+                "PERSONAL_INFO_BASE",
+                "개인정보 수집·이용 동의",
+                "desc",
+                true,
+                1
+        );
 
         assertThrows(
-                IllegalArgumentException.class,
-                () -> UserConsent.createNew(0L, item)
+                com.example.workmanagement.domain.consent.exception.ConsentDomainException.class,
+                () -> UserConsent.createNew(0L, term)
         );
     }
 
     @Test
-    void userConsentCreate_nullConsentItem_shouldFail() {
+    void userConsentCreate_nullConsentTerm_shouldFail() {
         assertThrows(
-                IllegalArgumentException.class,
+                com.example.workmanagement.domain.consent.exception.ConsentDomainException.class,
                 () -> UserConsent.createNew(1L, null)
         );
     }

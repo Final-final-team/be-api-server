@@ -1,10 +1,10 @@
 package com.example.workmanagement.domain.consent.service;
 
-import com.example.workmanagement.domain.consent.domain.model.ConsentItem;
+import com.example.workmanagement.domain.consent.domain.model.ConsentTerm;
 import com.example.workmanagement.domain.consent.domain.model.UserConsent;
 import com.example.workmanagement.domain.consent.exception.ConsentErrorCode;
 import com.example.workmanagement.domain.consent.exception.ConsentDomainException;
-import com.example.workmanagement.domain.consent.repository.ConsentItemRepository;
+import com.example.workmanagement.domain.consent.repository.ConsentTermRepository;
 import com.example.workmanagement.domain.consent.repository.UserConsentRepository;
 import com.example.workmanagement.domain.consent.service.command.SubmitConsentsCommand;
 import com.example.workmanagement.domain.consent.service.result.ConsentStatusResult;
@@ -28,43 +28,44 @@ import java.util.stream.Collectors;
  */
 public class ConsentService {
 
-    // 동의 항목 카탈로그(코드/버전/필수 여부) 조회
-    private final ConsentItemRepository consentItemRepository;
+    // 동의 항목 카탈로그(유형/항목명/버전/필수 여부) 조회
+    private final ConsentTermRepository consentTermRepository;
     // 사용자별 동의 이력(현재 MVP에서는 최신 기준 동의 여부 판단에 사용)
     private final UserConsentRepository userConsentRepository;
     // 필수 동의 판정 로직을 별도 서비스로 분리
     private final ConsentRequirementService consentRequirementService;
 
     public ConsentService(
-            ConsentItemRepository consentItemRepository,
+            ConsentTermRepository consentTermRepository,
             UserConsentRepository userConsentRepository,
             ConsentRequirementService consentRequirementService
     ) {
-        this.consentItemRepository = consentItemRepository;
+        this.consentTermRepository = consentTermRepository;
         this.userConsentRepository = userConsentRepository;
         this.consentRequirementService = consentRequirementService;
     }
 
     public List<ConsentStatusResult> getConsentStatuses(Long userId) {
-        // 각 code의 최신 버전 항목만 가져온다.
-        List<ConsentItem> latestItems = consentItemRepository.findAllLatest();
+        // 각 type/title 조합의 최신 버전 항목만 가져온다.
+        List<ConsentTerm> latestTerms = consentTermRepository.findAllLatest();
 
         // 사용자가 이미 동의한 최신 항목 id 집합
-        Set<Long> agreedItemIds = userConsentRepository.findAllByUserIdAndConsentItemIn(userId, latestItems)
+        Set<Long> agreedTermIds = userConsentRepository.findAllByUserIdAndConsentTermIn(userId, latestTerms)
                 .stream()
-                .map(userConsent -> userConsent.consentItem().id())
+                .map(userConsent -> userConsent.consentTerm().id())
                 .collect(Collectors.toSet());
 
         // 조회 모델로 변환
-        return latestItems.stream()
-                .map(item -> new ConsentStatusResult(
-                        item.code(),
-                        item.type(),
-                        item.name(),
-                        item.description(),
-                        item.required(),
-                        item.version(),
-                        agreedItemIds.contains(item.id())
+        return latestTerms.stream()
+                .map(term -> new ConsentStatusResult(
+                        term.id(),
+                        term.type(),
+                        term.code(),
+                        term.title(),
+                        term.description(),
+                        term.isRequired(),
+                        term.version(),
+                        agreedTermIds.contains(term.id())
                 ))
                 .toList();
     }
@@ -78,21 +79,23 @@ public class ConsentService {
                 throw new ConsentDomainException(ConsentErrorCode.CONSENT_DISAGREE_NOT_ALLOWED);
             }
 
-            // 요청된 code/version이 실제 카탈로그에 존재하는지 확인
-            ConsentItem consentItem = consentItemRepository.findByCodeAndVersion(agreement.code(), agreement.version())
+            // 요청된 type/code/version이 실제 카탈로그에 존재하는지 확인
+            ConsentTerm consentTerm = consentTermRepository
+                    .findByTypeAndCodeAndVersion(agreement.type(), agreement.code(), agreement.version())
                     .orElseThrow(() -> new ConsentDomainException(ConsentErrorCode.CONSENT_ITEM_NOT_FOUND));
 
             // 최신 버전이 아니면 제출 거절 (구버전 동의 방지)
-            Integer latestVersion = consentItemRepository.findLatestVersionByCode(agreement.code())
+            Integer latestVersion = consentTermRepository
+                    .findLatestVersionByTypeAndCode(agreement.type(), agreement.code())
                     .orElseThrow(() -> new ConsentDomainException(ConsentErrorCode.CONSENT_ITEM_NOT_FOUND));
             if (latestVersion != agreement.version()) {
                 throw new ConsentDomainException(ConsentErrorCode.CONSENT_NOT_LATEST_VERSION);
             }
 
             // 동일 항목 중복 저장 방지
-            boolean exists = userConsentRepository.existsByUserIdAndConsentItem_Id(userId, consentItem.id());
+            boolean exists = userConsentRepository.existsByUserIdAndConsentTerm_Id(userId, consentTerm.id());
             if (!exists) {
-                userConsentRepository.save(UserConsent.createNew(userId, consentItem));
+                userConsentRepository.save(UserConsent.createNew(userId, consentTerm));
                 agreedCount++;
             }
         }
