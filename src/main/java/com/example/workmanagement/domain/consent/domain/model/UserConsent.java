@@ -17,6 +17,11 @@ import lombok.NoArgsConstructor;
 
 import java.time.Instant;
 
+/**
+ * 사용자 동의 제출 이력 엔티티.
+ *
+ * user_id + consent_term_id 유니크 제약으로 동일 버전 동의 중복 저장을 막는다.
+ */
 @Entity
 @Table(
         uniqueConstraints = @UniqueConstraint(
@@ -25,11 +30,6 @@ import java.time.Instant;
         )
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-/**
- * 사용자 동의 제출 이력 엔티티.
- *
- * user_id + consent_term_id 유니크 제약으로 동일 버전 동의 중복 저장을 막는다.
- */
 public class UserConsent {
 
     @Id

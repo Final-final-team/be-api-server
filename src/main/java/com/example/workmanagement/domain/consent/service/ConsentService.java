@@ -17,8 +17,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-@Service
-@Transactional(readOnly = true)
 /**
  * 동의 도메인의 유스케이스를 조합하는 애플리케이션 서비스.
  *
@@ -26,6 +24,8 @@ import java.util.stream.Collectors;
  * - 동의 제출 시 최신 버전 검증 및 중복 제출 방지
  * - 제출 후 필수 동의 충족 여부 재평가
  */
+@Service
+@Transactional(readOnly = true)
 public class ConsentService {
 
     // 동의 항목 카탈로그(유형/항목명/버전/필수 여부) 조회

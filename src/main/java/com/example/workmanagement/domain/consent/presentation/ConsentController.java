@@ -23,15 +23,15 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-@RestController
-@RequestMapping("/api/consents")
-@Tag(name = "회원 동의", description = "회원 동의 조회/제출 API")
 /**
  * 회원 동의 관련 API 진입점.
  *
  * 컨트롤러에서는 JWT subject를 userId로 해석하고,
  * 실제 동의 규칙(최신 버전 검증, 필수 동의 충족 판정)은 서비스 계층에 위임한다.
  */
+@RestController
+@RequestMapping("/api/consents")
+@Tag(name = "회원 동의", description = "회원 동의 조회/제출 API")
 public class ConsentController {
 
     // 동의 조회/제출/필수 체크를 한곳에서 조합

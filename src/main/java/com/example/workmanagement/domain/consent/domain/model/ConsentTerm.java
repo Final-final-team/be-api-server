@@ -17,6 +17,12 @@ import lombok.NoArgsConstructor;
 
 import java.time.Instant;
 
+/**
+ * 동의 약관(용어) 카탈로그 엔티티.
+ *
+ * 동의 유형(ConsentType) 아래에 여러 항목이 올 수 있으므로
+ * type+title+version을 유니크 키로 관리한다.
+ */
 @Entity
 @Table(
         uniqueConstraints = @UniqueConstraint(
@@ -25,12 +31,6 @@ import java.time.Instant;
         )
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-/**
- * 동의 약관(용어) 카탈로그 엔티티.
- *
- * 동의 유형(ConsentType) 아래에 여러 항목이 올 수 있으므로
- * type+title+version을 유니크 키로 관리한다.
- */
 public class ConsentTerm {
 
     private static final int MAX_CODE_LENGTH = 100;

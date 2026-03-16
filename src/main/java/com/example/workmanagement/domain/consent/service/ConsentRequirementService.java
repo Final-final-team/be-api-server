@@ -11,14 +11,14 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-@Service
-@Transactional(readOnly = true)
 /**
  * 필수 동의 충족 여부를 계산하는 전용 서비스.
  *
  * 컨트롤러/필터/제출 후 결과가 동일한 규칙을 공유하도록
  * 필수 동의 판정은 여기서 단일화한다.
  */
+@Service
+@Transactional(readOnly = true)
 public class ConsentRequirementService {
 
     private final ConsentTermRepository consentTermRepository;
