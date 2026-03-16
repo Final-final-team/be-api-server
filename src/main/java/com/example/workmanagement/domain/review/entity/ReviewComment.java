@@ -24,6 +24,8 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @Entity
 @Table(name = "review_comments")
 @EntityListeners(AuditingEntityListener.class)
+// TODO 정책 코드: RVW-P-14-004
+// review_id 기준 조회 인덱스가 DB 레벨에 아직 없다.
 public class ReviewComment {
 
     /** 코멘트 식별자 */
@@ -90,7 +92,7 @@ public class ReviewComment {
 
     /**
      * 코멘트 본문을 수정하고 편집 표시를 남긴다.
-     * 정책 코드: RVW-P-08-003, RVW-P-08-006, RVW-P-08-010
+     * 정책 코드: RVW-P-08-003, RVW-P-08-007, RVW-P-08-011
      */
     public void updateContent(String content, Instant editedAt) {
         if (isDeleted()) {
@@ -103,7 +105,7 @@ public class ReviewComment {
 
     /**
      * 코멘트를 소프트 삭제 상태로 전환한다.
-     * 정책 코드: RVW-P-08-004, RVW-P-08-008
+     * 정책 코드: RVW-P-08-004, RVW-P-08-009
      */
     public void delete(Long deletedBy, Instant deletedAt) {
         if (isDeleted()) {
@@ -114,7 +116,7 @@ public class ReviewComment {
     }
 
     private static String validateContent(String content) {
-        // 정책 코드: RVW-P-08-007 (코멘트 본문 1,000자 이하)
+        // 정책 코드: RVW-P-08-008 (코멘트 본문 1,000자 이하)
         if (content == null || content.isBlank()) {
             throw new ReviewDomainException(
                     ReviewErrorCode.REVIEW_VALIDATION_ERROR,

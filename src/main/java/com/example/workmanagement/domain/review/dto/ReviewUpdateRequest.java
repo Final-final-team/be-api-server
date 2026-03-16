@@ -8,7 +8,7 @@ import jakarta.validation.constraints.Size;
 public record ReviewUpdateRequest(
         @Schema(description = "수정할 검토 본문", example = "수정된 검토 본문입니다.")
         @NotBlank
-        @Size(max = 10000) // 정책 코드: RVW-P-17-001 (검토 본문 10,000자 이하)
+        @Size(max = 10000) // 정책 코드: RVW-P-17-001 (검토 본문 1자 이상 10,000자 이하)
         String content
 ) {
 }

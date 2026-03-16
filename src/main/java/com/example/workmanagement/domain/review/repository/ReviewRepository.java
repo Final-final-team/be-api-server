@@ -8,9 +8,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ReviewRepository extends JpaRepository<Review, Long> {
 
+    // TODO 정책 코드: RVW-P-00-006
+    // 업무 단위 현재 유효 승인 상태가 필요해지면 마지막 APPROVED 라운드를 기준으로 계산하는 조회 메서드를 분리해야 한다.
+
     /**
      * 업무 기준으로 검토 라운드를 최신순 조회한다.
-     * 정책 코드: RVW-P-00-004, RVW-P-15-003
+     * 정책 코드: RVW-P-00-004, RVW-P-00-006, RVW-P-15-003
      */
     List<Review> findAllByTaskIdOrderByRoundNoDesc(Long taskId);
 

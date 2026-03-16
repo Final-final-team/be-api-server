@@ -25,6 +25,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/reviews/{reviewId}/attachments")
 @Tag(name = "검토 첨부", description = "검토 첨부 업로드와 삭제 API")
+// TODO 정책 코드: RVW-P-07-011
+// 첨부 다운로드 인가 API는 아직 구현되지 않았다.
 public class ReviewAttachmentController {
 
     private final ReviewCommandService reviewCommandService;

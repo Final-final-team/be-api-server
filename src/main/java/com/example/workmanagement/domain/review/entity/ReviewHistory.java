@@ -20,6 +20,8 @@ import lombok.Getter;
 @Getter
 @Entity
 @Table(name = "review_histories")
+// TODO 정책 코드: RVW-P-11-002, RVW-P-14-004, RVW-P-14-005
+// 감사 로그 엔티티에 taskId 전용 컬럼이 없고, review_id 및 review_id + occurred_at 인덱스도 아직 없다.
 public class ReviewHistory {
 
     /** 감사 로그 식별자 */

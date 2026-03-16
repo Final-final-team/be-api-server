@@ -1,5 +1,9 @@
 package com.example.workmanagement.domain.review.enums;
 
+// TODO 정책 코드: RVW-P-11-005, RVW-P-13-007
+// 정책표의 action type 명세와 현재 enum 이 불일치한다.
+// REFERENCE_UNASSIGNED / ADDITIONAL_REVIEWER_UNASSIGNED / ADMIN_OVERRIDE_APPLIED 가 없고,
+// 현재는 REFERENCE_REMOVED / ADDITIONAL_REVIEWER_REMOVED / REVIEW_RESUBMITTED 를 사용한다.
 public enum ReviewHistoryActionType {
     REVIEW_CREATED,
     REVIEW_RESUBMITTED,

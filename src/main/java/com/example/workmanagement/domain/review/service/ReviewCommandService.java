@@ -49,6 +49,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
+// TODO 정책 코드: RVW-P-13-001, RVW-P-13-002, RVW-P-13-003, RVW-P-13-004, RVW-P-13-005, RVW-P-13-006, RVW-P-13-007
+// 관리자 예외 수정 전용 command/service/controller 흐름이 아직 없어 정책상 허용된 최소 범위 정정을 별도 절차로 처리하지 못한다.
 public class ReviewCommandService {
 
     private static final int MAX_REFERENCE_COUNT = 50;
@@ -79,7 +81,9 @@ public class ReviewCommandService {
             "image/webp"
     ));
 
-    private final MockTaskRepository taskRepository; // TaskRepo 직접 참조 제거 예정
+    // TODO 아키텍처: Review BC 가 Task BC repository 를 직접 참조하지 않도록 포트/파사드로 치환해야 한다.
+    // 업무 상태 판정/변경과 작성자 판별은 Task BC 가 책임지고, Review BC 는 필요한 데이터만 전달받도록 정리한다.
+    private final MockTaskRepository taskRepository;
     private final ReviewRepository reviewRepository;
     private final ReviewReferenceRepository reviewReferenceRepository;
     private final ReviewAttachmentRepository reviewAttachmentRepository;
@@ -93,7 +97,8 @@ public class ReviewCommandService {
     private final ReviewResultMapper reviewResultMapper;
 
     public ReviewCommandService(
-            MockTaskRepository taskRepository, // 정책 코드: RVW-P-00-002, RVW-P-03-001 / TaskRepo 직접 참조 제거 예정
+            // TODO 아키텍처: Task BC 직접 참조 제거 예정. 업무 상태 판정/변경과 작성자 판별은 Task BC 가 맡고 Review BC 는 데이터만 받도록 수정.
+            MockTaskRepository taskRepository,
             ReviewRepository reviewRepository,
             ReviewReferenceRepository reviewReferenceRepository,
             ReviewAttachmentRepository reviewAttachmentRepository,
@@ -106,7 +111,7 @@ public class ReviewCommandService {
             ObjectMapper objectMapper,
             ReviewResultMapper reviewResultMapper
     ) {
-        this.taskRepository = taskRepository; // 정책 코드: RVW-P-00-002, RVW-P-03-001 / TaskRepo 직접 참조 제거 예정
+        this.taskRepository = taskRepository;
         this.reviewRepository = reviewRepository;
         this.reviewReferenceRepository = reviewReferenceRepository;
         this.reviewAttachmentRepository = reviewAttachmentRepository;
@@ -122,7 +127,7 @@ public class ReviewCommandService {
 
     /**
      * 최초 상신 또는 재상신용 검토를 생성한다.
-     * 정책 코드: RVW-P-00-002, RVW-P-00-003, RVW-P-00-004, RVW-P-01-001, RVW-P-03-001
+     * 정책 코드: RVW-P-00-002, RVW-P-00-003, RVW-P-00-004, RVW-P-00-005, RVW-P-01-001, RVW-P-03-005
      */
     public ReviewDetailResult submitReview(Long taskId, SubmitReviewCommand command, ActorContext actor) {
         MockTask task = loadTask(taskId);
@@ -131,6 +136,9 @@ public class ReviewCommandService {
             throw new ReviewDomainException(ReviewErrorCode.REVIEW_SUBMIT_NOT_ALLOWED);
         }
 
+        // TODO 정책 코드: RVW-P-00-001, RVW-P-00-002, RVW-P-03-005
+        // 상신 가능 여부는 Task BC 에서 업무 상태와 작성자 여부를 함께 판별해 내려주는 구조로 바꾼다.
+        // Review BC 는 결과만 사용하고 Task 상태/작성자 규칙을 직접 해석하지 않도록 정리한다.
         if (!reviewAuthorizationPort.canSubmit(task, actor) && !isTaskAuthor(task, actor)) {
             throw new ReviewDomainException(ReviewErrorCode.REVIEW_SUBMIT_FORBIDDEN);
         }
@@ -169,11 +177,14 @@ public class ReviewCommandService {
 
     /**
      * 제출된 검토의 본문을 수정한다.
-     * 정책 코드: RVW-P-03-002
+     * 정책 코드: RVW-P-03-005
      */
     public ReviewDetailResult updateReview(Long reviewId, Long lockVersion, UpdateReviewCommand command, ActorContext actor) {
         Review review = loadReview(reviewId);
         validateSubmittedReview(review, ReviewErrorCode.REVIEW_UPDATE_NOT_ALLOWED);
+        // TODO 정책 코드: RVW-P-03-005, RVW-P-13-001, RVW-P-13-002
+        // 정책상 일반 본문 수정은 상신자 본인만 가능하고, 관리자 예외 수정은 별도 흐름으로 분리되어야 한다.
+        // 현재는 legacy canUpdate permission 으로 일반 수정 경로에 우회 진입할 수 있다.
         assertAllowed(
                 reviewAuthorizationPort.canUpdate(review, actor) || isSubmitter(review, actor),
                 ReviewErrorCode.REVIEW_UPDATE_FORBIDDEN
@@ -196,11 +207,14 @@ public class ReviewCommandService {
 
     /**
      * 제출된 검토를 승인한다.
-     * 정책 코드: RVW-P-01-002, RVW-P-03-003, RVW-P-10-001
+     * 정책 코드: RVW-P-01-002, RVW-P-03-002, RVW-P-10-001
      */
     public ReviewDetailResult approveReview(Long reviewId, Long lockVersion, ActorContext actor) {
         Review review = loadReview(reviewId);
         validateSubmittedReview(review, ReviewErrorCode.REVIEW_APPROVAL_NOT_ALLOWED);
+        // TODO 정책 코드: RVW-P-03-002, RVW-P-06-001, RVW-P-06-002
+        // 정책상 승인/반려는 REVIEW_DECIDE permission 으로만 허용되고, 추가 검토자는 표시용 정보일 뿐 권한 근거가 아니다.
+        // 현재는 추가 검토자면 별도 decide permission 없이도 승인할 수 있다.
         assertAllowed(
                 reviewAuthorizationPort.canApprove(review, actor) || isAdditionalReviewer(review, actor.actorId()),
                 ReviewErrorCode.REVIEW_APPROVAL_FORBIDDEN
@@ -225,7 +239,7 @@ public class ReviewCommandService {
 
     /**
      * 제출된 검토를 반려한다.
-     * 정책 코드: RVW-P-01-003, RVW-P-03-004, RVW-P-12-001, RVW-P-10-001
+     * 정책 코드: RVW-P-01-003, RVW-P-03-002, RVW-P-12-001, RVW-P-10-001
      */
     public ReviewDetailResult rejectReview(
             Long reviewId,
@@ -235,6 +249,9 @@ public class ReviewCommandService {
     ) {
         Review review = loadReview(reviewId);
         validateSubmittedReview(review, ReviewErrorCode.REVIEW_REJECTION_NOT_ALLOWED);
+        // TODO 정책 코드: RVW-P-03-002, RVW-P-06-001, RVW-P-06-002
+        // 정책상 승인/반려는 REVIEW_DECIDE permission 으로만 허용되고, 추가 검토자는 표시용 정보일 뿐 권한 근거가 아니다.
+        // 현재는 추가 검토자면 별도 decide permission 없이도 반려할 수 있다.
         assertAllowed(
                 reviewAuthorizationPort.canReject(review, actor) || isAdditionalReviewer(review, actor.actorId()),
                 ReviewErrorCode.REVIEW_REJECTION_FORBIDDEN
@@ -273,6 +290,9 @@ public class ReviewCommandService {
     ) {
         Review review = loadReview(reviewId);
         validateSubmittedReview(review, ReviewErrorCode.REVIEW_CANCEL_NOT_ALLOWED);
+        // TODO 정책 코드: RVW-P-01-004, RVW-P-03-005
+        // 정책상 취소는 상신자 본인만 수행할 수 있다.
+        // 현재는 legacy canCancel permission 으로 상신자가 아니어도 취소가 가능하다.
         assertAllowed(
                 reviewAuthorizationPort.canCancel(review, actor) || isSubmitter(review, actor),
                 ReviewErrorCode.REVIEW_CANCEL_FORBIDDEN
@@ -307,6 +327,9 @@ public class ReviewCommandService {
     ) {
         Review review = loadReview(reviewId);
         validateSubmittedReview(review, ReviewErrorCode.REFERENCE_ASSIGN_NOT_ALLOWED);
+        // TODO 정책 코드: RVW-P-05-003, RVW-P-03-005
+        // 정책상 참조자 지정/해제는 상신자만 가능하다.
+        // 현재는 legacy canManageReferences permission 으로도 참조자 관리가 가능하다.
         assertAllowed(
                 reviewAuthorizationPort.canManageReferences(review, actor) || isSubmitter(review, actor),
                 ReviewErrorCode.REFERENCE_ASSIGN_FORBIDDEN
@@ -372,12 +395,14 @@ public class ReviewCommandService {
 
     /**
      * 첨부 업로드용 presigned URL 응답을 생성한다.
-     * 정책 코드: RVW-P-07-001, RVW-P-07-002, RVW-P-07-003, RVW-P-07-004, RVW-P-07-005, RVW-P-07-006, RVW-P-07-007, RVW-P-07-008
+     * 정책 코드: RVW-P-07-001, RVW-P-07-002, RVW-P-07-003, RVW-P-07-004, RVW-P-07-005, RVW-P-07-006, RVW-P-07-007, RVW-P-07-008, RVW-P-07-009, RVW-P-07-012
      */
     // TODO 정책 코드: RVW-P-07-009
     // presigned URL 실제 스토리지 연동 구현이 아직 없다.
     // TODO 정책 코드: RVW-P-07-010
     // 첨부 바이러스 검사 등 보안 검사가 아직 없다.
+    // TODO 정책 코드: RVW-P-07-011
+    // REVIEW_VIEW 권한 기반의 첨부 다운로드 API/다운로드 presign 인가가 아직 없다.
     public ReviewAttachmentPresignResult createAttachmentPresignUrl(
             Long reviewId,
             Long lockVersion,
@@ -408,8 +433,10 @@ public class ReviewCommandService {
 
     /**
      * 업로드가 끝난 첨부를 검토에 연결한다.
-     * 정책 코드: RVW-P-07-001, RVW-P-07-002, RVW-P-07-003, RVW-P-07-004, RVW-P-07-005, RVW-P-07-006, RVW-P-07-007, RVW-P-07-008
+     * 정책 코드: RVW-P-07-001, RVW-P-07-002, RVW-P-07-003, RVW-P-07-004, RVW-P-07-005, RVW-P-07-006, RVW-P-07-007, RVW-P-07-008, RVW-P-07-013
      */
+    // TODO 정책 코드: RVW-P-07-013
+    // 현재는 요청 payload 값만 재검증하고 실제 업로드된 객체의 확장자/MIME/크기를 스토리지 메타데이터 기준으로 다시 검증하지 않는다.
     public ReviewDetailResult confirmAttachment(
             Long reviewId,
             Long lockVersion,
@@ -489,8 +516,8 @@ public class ReviewCommandService {
      * 검토의 추가 검토자를 할당한다.
      * 정책 코드: RVW-P-04-001, RVW-P-04-002, RVW-P-04-003, RVW-P-06-001, RVW-P-06-002, RVW-P-06-003, RVW-P-06-004, RVW-P-06-005, RVW-P-06-006
      */
-    // TODO 정책 코드: RVW-P-04-004
-    // 전역 승인/반려 권한 보유자를 추가 검토자로 금지하는 검증이 아직 없다.
+    // TODO 정책 코드: RVW-P-06-002
+    // 추가 검토자 대상이 REVIEW_DECIDE permission 보유자인지 검증하는 실제 사용자/권한 조회가 아직 없다.
     public ReviewDetailResult addAdditionalReviewer(
             Long reviewId,
             AssignAdditionalReviewerCommand command,
@@ -565,7 +592,7 @@ public class ReviewCommandService {
 
     /**
      * 검토 코멘트를 생성한다.
-     * 정책 코드: RVW-P-08-002, RVW-P-08-005
+     * 정책 코드: RVW-P-03-003, RVW-P-08-002, RVW-P-08-006
      */
     public ReviewDetailResult addComment(Long reviewId, CreateCommentCommand command, ActorContext actor) {
         Review review = loadReview(reviewId);
@@ -594,7 +621,7 @@ public class ReviewCommandService {
 
     /**
      * 검토 코멘트를 수정한다.
-     * 정책 코드: RVW-P-08-003, RVW-P-08-006, RVW-P-08-007
+     * 정책 코드: RVW-P-08-003, RVW-P-08-007, RVW-P-08-011
      */
     public ReviewDetailResult updateComment(
             Long reviewId,
@@ -633,7 +660,7 @@ public class ReviewCommandService {
 
     /**
      * 검토 코멘트를 삭제한다.
-     * 정책 코드: RVW-P-08-004, RVW-P-08-006, RVW-P-08-008, RVW-P-11-009
+     * 정책 코드: RVW-P-08-004, RVW-P-08-007, RVW-P-08-009, RVW-P-11-009
      */
     public ReviewDetailResult deleteComment(Long reviewId, Long commentId, ActorContext actor) {
         Review review = loadReview(reviewId);
@@ -672,10 +699,12 @@ public class ReviewCommandService {
      * 업무 식별자로 업무를 조회한다.
      * 정책 코드: RVW-P-00-002, RVW-P-03-001
      */
+    // TODO 아키텍처: Task 존재 확인과 상태 조회는 Task BC 가 책임져야 한다.
+    // Review BC 는 직접 repository 를 치지 말고 상위 계층 또는 포트를 통해 필요한 데이터만 전달받도록 변경한다.
     private MockTask loadTask(Long taskId) {
         return taskRepository.findById(taskId)
                 .orElseThrow(() -> new ReviewDomainException(ReviewErrorCode.TASK_NOT_FOUND));
-    } // 정책 코드: RVW-P-00-002, RVW-P-03-001 / 해당 로직은 Task쪽에 있는 것이 맞다고 판단, 추후 Task 쪽 추가되면 삭제 예정
+    }
 
     /**
      * 검토 식별자로 검토를 조회한다.
@@ -702,6 +731,9 @@ public class ReviewCommandService {
     /**
      * 제출 상태에서만 가능한 액션인지 검증한다.
      */
+    // TODO 정책 코드: RVW-P-10-007
+    // 정책상 종료 상태 검토에 대한 허용되지 않은 요청은 상태 충돌 예외로 분류할 수 있다.
+    // 현재는 액션별 *_NOT_ALLOWED 예외를 사용한다.
     private void validateSubmittedReview(Review review, ReviewErrorCode errorCode) {
         if (!review.isSubmitted()) {
             throw new ReviewDomainException(errorCode);
@@ -728,11 +760,13 @@ public class ReviewCommandService {
 
     /**
      * 요청자가 업무 작성자인지 확인한다.
-     * 정책 코드: RVW-P-03-001
+     * 정책 코드: RVW-P-03-005
      */
+    // TODO 아키텍처: 업무 작성자 판별은 Task BC 의 책임이다.
+    // Review BC 가 직접 task.authorId 를 비교하지 말고, Task BC 가 작성자 여부를 판별해 결과만 전달하도록 변경한다.
     private boolean isTaskAuthor(MockTask task, ActorContext actor) {
         return Objects.equals(task.getAuthorId(), actor.actorId());
-    } // 정책 코드: RVW-P-03-001 / 업무 작성자인지에 대한 판별도 Task에서 하는거로 추후 수정
+    }
 
     /**
      * 요청자가 검토 제출자인지 확인한다.
@@ -764,9 +798,12 @@ public class ReviewCommandService {
 
     /**
      * 코멘트 작성 권한과 검토별 예외 허용 조건을 함께 검증한다.
-     * 정책 코드: RVW-P-02-001, RVW-P-08-002
+     * 정책 코드: RVW-P-08-002
      */
     private boolean canCreateComment(Review review, ActorContext actor) {
+        // TODO 정책 코드: RVW-P-03-003, RVW-P-05-002, RVW-P-09-004
+        // 정책상 코멘트 작성은 REVIEW_COMMENT_CREATE permission 을 가진 프로젝트 소속 활성 사용자만 가능하다.
+        // 현재는 상신자/참조자/추가 검토자/결정권자 관계만으로도 코멘트 작성이 가능하다.
         return isSubmitter(review, actor)
                 || isReference(review, actor.actorId())
                 || reviewAuthorizationPort.canApprove(review, actor)
@@ -839,6 +876,9 @@ public class ReviewCommandService {
                     "An additional reviewer cannot be assigned as a reference."
             );
         }
+        // TODO 정책 코드: RVW-P-05-002, RVW-P-00-001, RVW-P-09-004
+        // 프로젝트 소속/활성 여부 판단은 외부 권한·멤버십 도메인이 맡고,
+        // Review BC 는 참조자 대상이 REVIEW_COMMENT_CREATE 권한 보유자인지 여부 정도만 전달받아 검증한다.
     }
 
     private void validateAdditionalReviewerCapacity(Long reviewId) {
@@ -860,6 +900,9 @@ public class ReviewCommandService {
                     "A reference cannot be assigned as an additional reviewer."
             );
         }
+        // TODO 정책 코드: RVW-P-06-002, RVW-P-00-001, RVW-P-09-004
+        // 프로젝트 소속/활성 여부 판단은 외부 권한·멤버십 도메인이 맡고,
+        // Review BC 는 추가 검토자 대상이 REVIEW_DECIDE 권한 보유자인지 여부 정도만 전달받아 검증한다.
     }
 
     private void validateAttachmentDrafts(List<SubmitReviewCommand.AttachmentDraft> attachments) {
@@ -947,6 +990,8 @@ public class ReviewCommandService {
     /**
      * 감사 로그 엔티티와 인프라 로그를 함께 기록한다.
      */
+    // TODO 정책 코드: RVW-P-11-002
+    // 정책상 taskId 는 모든 감사 로그의 필수 항목인데 현재는 일부 이벤트에서 metadata 로만 기록된다.
     // TODO 정책 코드: RVW-P-11-010
     // action별 metadata key 표준 강제 로직이 아직 없다.
     private void recordHistory(

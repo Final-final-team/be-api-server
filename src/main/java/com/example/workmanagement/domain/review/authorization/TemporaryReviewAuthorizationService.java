@@ -8,6 +8,10 @@ import org.springframework.stereotype.Component;
 @Component
 public class TemporaryReviewAuthorizationService implements ReviewAuthorizationPort {
 
+    // TODO 정책 코드: RVW-P-02-001, RVW-P-03-001, RVW-P-03-002, RVW-P-03-003, RVW-P-03-004, RVW-P-03-005
+    // 프로젝트 소속/권한/활성 사용자 판정은 외부 권한·멤버십 도메인이 책임져야 한다.
+    // Review BC 는 필요한 permission 보유 여부 같은 결과만 전달받아 사용하도록 정리한다.
+
     /**
      * 임시 구현에서는 permission 헤더 또는 관리자 예외 권한으로 상신 가능 여부를 판정한다.
      */

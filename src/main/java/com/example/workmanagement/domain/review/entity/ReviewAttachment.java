@@ -22,6 +22,8 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @Entity
 @Table(name = "review_attachments")
 @EntityListeners(AuditingEntityListener.class)
+// TODO 정책 코드: RVW-P-14-004
+// review_id 기준 조회 인덱스가 DB 레벨에 아직 없다.
 public class ReviewAttachment {
 
     /** 첨부 식별자 */

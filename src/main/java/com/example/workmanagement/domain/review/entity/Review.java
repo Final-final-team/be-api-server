@@ -25,6 +25,8 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @Entity
 @Table(name = "reviews")
 @EntityListeners(AuditingEntityListener.class)
+// TODO 정책 코드: RVW-P-14-001
+// task_id + round_no 유니크 제약이 DB 레벨에 아직 없다.
 public class Review {
 
     /** 검토 식별자 */
@@ -102,7 +104,7 @@ public class Review {
 
     /**
      * 상신 상태의 새 검토를 생성한다.
-     * 정책 코드: RVW-P-00-003, RVW-P-00-004, RVW-P-01-001
+     * 정책 코드: RVW-P-00-003, RVW-P-00-004, RVW-P-00-005, RVW-P-01-001
      */ // 정책 코드: RVW-P-00-002 / taskId 존재 여부 검증 로직은 task 도메인 추가되면 위임 예정
     public static Review submit(Long taskId, Integer roundNo, String content, Long submittedBy) {
         return new Review(taskId, roundNo, content, submittedBy);
@@ -133,7 +135,7 @@ public class Review {
     }
 
     private static String validateContent(String content) {
-        // 정책 코드: RVW-P-17-001 (검토 본문 10,000자 이하)
+        // 정책 코드: RVW-P-17-001 (검토 본문 1자 이상 10,000자 이하)
         if (content == null || content.isBlank()) {
             throw new ReviewDomainException(ReviewErrorCode.REVIEW_VALIDATION_ERROR, "content must not be blank");
         }
@@ -144,7 +146,7 @@ public class Review {
     }
 
     private static String validateRejectionReason(String reason) {
-        // 정책 코드: RVW-P-17-002, RVW-P-12-001 (반려 사유 2,000자 이하)
+        // 정책 코드: RVW-P-12-001, RVW-P-17-002 (반려 사유 1자 이상 2,000자 이하)
         if (reason == null || reason.isBlank()) {
             throw new ReviewDomainException(ReviewErrorCode.REJECTION_REASON_REQUIRED);
         }

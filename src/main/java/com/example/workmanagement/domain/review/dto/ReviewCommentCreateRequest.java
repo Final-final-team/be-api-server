@@ -8,7 +8,7 @@ import jakarta.validation.constraints.Size;
 public record ReviewCommentCreateRequest(
         @Schema(description = "코멘트 내용", example = "2페이지 수치 근거를 보완해주세요.")
         @NotBlank
-        @Size(max = 1000) // 정책 코드: RVW-P-08-007 (코멘트 본문 1,000자 이하)
+        @Size(max = 1000) // 정책 코드: RVW-P-08-008 (코멘트 본문 1,000자 이하)
         String content
 ) {
 }

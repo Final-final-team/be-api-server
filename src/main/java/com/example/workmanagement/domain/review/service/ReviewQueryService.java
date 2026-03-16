@@ -23,7 +23,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class ReviewQueryService {
 
-    private final MockTaskRepository taskRepository; // TaskRepo 직접 참조 제거 예정
+    // TODO 아키텍처: Review BC 가 Task BC repository 를 직접 참조하지 않도록 조회 포트로 대체해야 한다.
+    // 업무 존재 여부 판단은 Task BC 가 맡고 Review BC 는 필요한 최소 데이터만 받아야 한다.
+    private final MockTaskRepository taskRepository;
     private final ReviewRepository reviewRepository;
     private final ReviewReferenceRepository reviewReferenceRepository;
     private final ReviewAdditionalReviewerRepository reviewAdditionalReviewerRepository;
@@ -34,7 +36,8 @@ public class ReviewQueryService {
     private final ReviewAuthorizationPort reviewAuthorizationPort;
 
     public ReviewQueryService(
-            MockTaskRepository taskRepository, // TaskRepo 직접 참조 제거 예정
+            // TODO 아키텍처: Task BC 직접 참조 제거 예정. 상위 계층 또는 포트를 통해 업무 존재 여부 결과만 전달받도록 수정.
+            MockTaskRepository taskRepository,
             ReviewRepository reviewRepository,
             ReviewReferenceRepository reviewReferenceRepository,
             ReviewAdditionalReviewerRepository reviewAdditionalReviewerRepository,
@@ -44,7 +47,7 @@ public class ReviewQueryService {
             ReviewResultMapper reviewResultMapper,
             ReviewAuthorizationPort reviewAuthorizationPort
     ) {
-        this.taskRepository = taskRepository; // TaskRepo 직접 참조 제거 예정
+        this.taskRepository = taskRepository;
         this.reviewRepository = reviewRepository;
         this.reviewReferenceRepository = reviewReferenceRepository;
         this.reviewAdditionalReviewerRepository = reviewAdditionalReviewerRepository;
@@ -59,6 +62,9 @@ public class ReviewQueryService {
      * 업무 단위 검토 목록을 조회한다.
      * 정책 코드: RVW-P-02-001, RVW-P-15-003
      */
+    // TODO 정책 코드: RVW-P-02-001, RVW-P-03-001
+    // 현재는 REVIEW_VIEW 권한이 없더라도 상신자/참조자/추가 검토자면 결과 일부를 볼 수 있게 필터링한다.
+    // 정책상 조회는 프로젝트 소속 + REVIEW_VIEW 권한을 먼저 강제하고, 이후에는 전역 조회를 허용해야 한다.
     // TODO 정책 코드: RVW-P-15-004
     // 검토 목록 조회의 페이징 방식(cursor 또는 offset) 통일이 아직 없다.
     public List<ReviewSummaryResult> findReviewsByTask(Long taskId, ActorContext actor) {
@@ -71,7 +77,10 @@ public class ReviewQueryService {
                 .filter(review -> canViewReview(review, actor))
                 .map(reviewResultMapper::toSummary)
                 .toList();
-    } // review 가 task repo를 알면 안되긴한데 task repo 직접 호출가능? 아니면 Task쪽에서 제공? 아니면 상위계층에서 Task 존재검증?
+    }
+
+    // TODO 아키텍처: 업무 존재 검증도 Task BC 가 책임져야 한다.
+    // ReviewQueryService 는 taskRepository.existsById 대신 Task BC 또는 상위 계층이 넘겨준 결과만 사용하도록 변경한다.
 
     /**
      * 검토 상세를 조회한다.
@@ -96,6 +105,9 @@ public class ReviewQueryService {
      * 검토 이력을 조회한다.
      * 정책 코드: RVW-P-02-001, RVW-P-11-007, RVW-P-15-002
      */
+    // TODO 정책 코드: RVW-P-02-001, RVW-P-11-007
+    // 감사 로그도 현재는 canViewReview 관계 조건에 묶여 있다.
+    // 정책상 프로젝트 소속자는 REVIEW_VIEW 권한 검증과 별도로 감사 로그를 조회할 수 있어야 한다.
     // TODO 정책 코드: RVW-P-15-004
     // 감사 로그 조회의 페이징 방식(cursor 또는 offset) 통일이 아직 없다.
     public List<ReviewHistoryResult> findReviewHistories(Long reviewId, ActorContext actor) {
@@ -114,7 +126,9 @@ public class ReviewQueryService {
     }
 
     private boolean canViewReview(Review review, ActorContext actor) {
-        // 정책 코드: RVW-P-02-001
+        // TODO 정책 코드: RVW-P-02-001, RVW-P-03-001
+        // 현재 조회 인가는 참여자/결정권자 관계 기반의 legacy 규칙이다.
+        // 정책은 프로젝트 소속 + REVIEW_VIEW permission 기준의 전역 조회를 요구한다.
         return review.getSubmittedBy().equals(actor.actorId())
                 || reviewReferenceRepository.existsByReview_IdAndUserId(review.getId(), actor.actorId())
                 || reviewAdditionalReviewerRepository.existsByReview_IdAndUserId(review.getId(), actor.actorId())

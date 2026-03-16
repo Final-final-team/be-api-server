@@ -9,7 +9,7 @@ public interface ReviewReferenceRepository extends JpaRepository<ReviewReference
 
     /**
      * 동일 사용자가 이미 참조자로 등록되어 있는지 확인한다.
-     * 정책 코드: RVW-P-05-004
+     * 정책 코드: RVW-P-05-005
      */
     boolean existsByReview_IdAndUserId(Long reviewId, Long userId);
 
@@ -27,7 +27,7 @@ public interface ReviewReferenceRepository extends JpaRepository<ReviewReference
 
     /**
      * 검토에 연결된 참조자 수를 조회한다.
-     * 정책 코드: RVW-P-05-005
+     * 정책 코드: RVW-P-05-006
      */
     long countByReview_Id(Long reviewId);
 }

@@ -16,7 +16,7 @@ public enum ReviewStatus {
 
     /**
      * 참조자 변경이 가능한 상태인지 판별한다.
-     * 정책 코드: RVW-P-05-003
+     * 정책 코드: RVW-P-05-004
      */
     public boolean allowsReferenceMutation() {
         return this == SUBMITTED;
@@ -32,7 +32,7 @@ public enum ReviewStatus {
 
     /**
      * 신규 코멘트 작성이 가능한 상태인지 판별한다.
-     * 정책 코드: RVW-P-08-005
+     * 정책 코드: RVW-P-08-006
      */
     public boolean allowsNewComment() {
         return this == SUBMITTED || this == APPROVED;
@@ -40,7 +40,7 @@ public enum ReviewStatus {
 
     /**
      * 기존 코멘트 수정/삭제가 가능한 상태인지 판별한다.
-     * 정책 코드: RVW-P-08-006
+     * 정책 코드: RVW-P-08-007
      */
     public boolean allowsCommentMutation() {
         return this == SUBMITTED;
