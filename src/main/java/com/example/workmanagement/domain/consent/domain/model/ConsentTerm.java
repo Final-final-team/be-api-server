@@ -1,5 +1,6 @@
 package com.example.workmanagement.domain.consent.domain.model;
 
+import com.example.workmanagement.domain.consent.domain.model.consts.ConsentConstants;
 import com.example.workmanagement.domain.consent.domain.model.enums.ConsentType;
 import com.example.workmanagement.domain.consent.exception.ConsentDomainException;
 import com.example.workmanagement.domain.consent.exception.ConsentErrorCode;
@@ -13,7 +14,9 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.experimental.Accessors;
 
 import java.time.Instant;
 
@@ -30,12 +33,10 @@ import java.time.Instant;
                 columnNames = {"type", "code", "version"}
         )
 )
+@Accessors(fluent = true)
+@Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ConsentTerm {
-
-    private static final int MAX_CODE_LENGTH = 100;
-    private static final int MAX_TITLE_LENGTH = 100;
-    private static final int MAX_DESCRIPTION_LENGTH = 1000;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -45,13 +46,13 @@ public class ConsentTerm {
     @Column(nullable = false, length = 30)
     private ConsentType type;
 
-    @Column(nullable = false, length = 100)
+    @Column(nullable = false, length = ConsentConstants.MAX_CODE_LENGTH)
     private String code;
 
-    @Column(nullable = false, length = 100)
+    @Column(nullable = false, length = ConsentConstants.MAX_TITLE_LENGTH)
     private String title;
 
-    @Column(nullable = false, length = 1000)
+    @Column(nullable = false, length = ConsentConstants.MAX_DESCRIPTION_LENGTH)
     private String description;
 
     @Column(name = "is_required", nullable = false)
@@ -128,7 +129,7 @@ public class ConsentTerm {
         if (code == null || code.isBlank()) {
             throw new ConsentDomainException(ConsentErrorCode.CONSENT_INVALID_ARGUMENT, "동의 항목 코드는 비어 있을 수 없습니다.");
         }
-        if (code.length() > MAX_CODE_LENGTH) {
+        if (code.length() > ConsentConstants.MAX_CODE_LENGTH) {
             throw new ConsentDomainException(ConsentErrorCode.CONSENT_INVALID_ARGUMENT, "동의 항목 코드 길이가 허용 범위를 초과했습니다.");
         }
     }
@@ -137,7 +138,7 @@ public class ConsentTerm {
         if (title == null || title.isBlank()) {
             throw new ConsentDomainException(ConsentErrorCode.CONSENT_INVALID_ARGUMENT, "동의 항목명은 비어 있을 수 없습니다.");
         }
-        if (title.length() > MAX_TITLE_LENGTH) {
+        if (title.length() > ConsentConstants.MAX_TITLE_LENGTH) {
             throw new ConsentDomainException(ConsentErrorCode.CONSENT_INVALID_ARGUMENT, "동의 항목명 길이가 허용 범위를 초과했습니다.");
         }
     }
@@ -146,7 +147,7 @@ public class ConsentTerm {
         if (description == null || description.isBlank()) {
             throw new ConsentDomainException(ConsentErrorCode.CONSENT_INVALID_ARGUMENT, "동의 항목 설명은 비어 있을 수 없습니다.");
         }
-        if (description.length() > MAX_DESCRIPTION_LENGTH) {
+        if (description.length() > ConsentConstants.MAX_DESCRIPTION_LENGTH) {
             throw new ConsentDomainException(ConsentErrorCode.CONSENT_INVALID_ARGUMENT, "동의 항목 설명 길이가 허용 범위를 초과했습니다.");
         }
     }
@@ -161,37 +162,5 @@ public class ConsentTerm {
         if (createdAt == null) {
             throw new ConsentDomainException(ConsentErrorCode.CONSENT_INVALID_ARGUMENT, "동의 항목 생성 시각은 필수입니다.");
         }
-    }
-
-    public Long id() {
-        return id;
-    }
-
-    public ConsentType type() {
-        return type;
-    }
-
-    public String code() {
-        return code;
-    }
-
-    public String title() {
-        return title;
-    }
-
-    public String description() {
-        return description;
-    }
-
-    public boolean isRequired() {
-        return isRequired;
-    }
-
-    public int version() {
-        return version;
-    }
-
-    public Instant createdAt() {
-        return createdAt;
     }
 }

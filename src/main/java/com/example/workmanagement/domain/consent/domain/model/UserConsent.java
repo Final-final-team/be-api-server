@@ -13,7 +13,9 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.experimental.Accessors;
 
 import java.time.Instant;
 
@@ -29,6 +31,8 @@ import java.time.Instant;
                 columnNames = {"user_id", "consent_term_id"}
         )
 )
+@Accessors(fluent = true)
+@Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class UserConsent {
 
@@ -95,21 +99,5 @@ public class UserConsent {
         if (agreedAt == null) {
             throw new ConsentDomainException(ConsentErrorCode.CONSENT_INVALID_ARGUMENT, "회원 동의 시각은 필수입니다.");
         }
-    }
-
-    public Long id() {
-        return id;
-    }
-
-    public Long userId() {
-        return userId;
-    }
-
-    public ConsentTerm consentTerm() {
-        return consentTerm;
-    }
-
-    public Instant agreedAt() {
-        return agreedAt;
     }
 }
