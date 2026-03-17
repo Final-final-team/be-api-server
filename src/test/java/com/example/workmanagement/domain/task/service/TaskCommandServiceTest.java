@@ -33,7 +33,6 @@ import org.mockito.Mockito;
 import org.springframework.dao.DataIntegrityViolationException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -86,18 +85,20 @@ class TaskCommandServiceTest {
 
     @Test
     void createTask_whenValid_shouldPersistAndReturnDetail() {
-        TaskDetailResult detail = createDetail(100L, 1L, 10L, "업무 제목", TaskStatus.PENDING);
         Task savedTask = createTask(100L, 1L, 10L, "업무 제목", TaskStatus.PENDING);
 
         when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
                 .thenReturn(Optional.of(Mockito.mock(ProjectMember.class)));
         when(permissionChecker.hasTaskPermission(1L, 10L, TaskPermission.TASK_CREATE)).thenReturn(true);
         when(taskRepository.save(any(Task.class))).thenReturn(savedTask);
-        when(taskRepository.findDetailById(100L)).thenReturn(Optional.of(detail));
 
         TaskDetailResult result = taskCommandService.createTask(createCommand(1L, 10L, "  업무 제목  "));
 
-        assertSame(detail, result);
+        assertEquals(100L, result.taskId());
+        assertEquals(1L, result.projectId());
+        assertEquals(10L, result.authorId());
+        assertEquals("업무 제목", result.title());
+        assertEquals(TaskStatus.PENDING, result.status());
 
         ArgumentCaptor<Task> taskCaptor = ArgumentCaptor.forClass(Task.class);
         verify(taskRepository).save(taskCaptor.capture());
@@ -126,18 +127,17 @@ class TaskCommandServiceTest {
     @Test
     void updateTitle_whenAuthor_shouldUpdateAndReturnDetail() {
         Task task = createTask(100L, 1L, 10L, "기존 제목", TaskStatus.PENDING);
-        TaskDetailResult detail = createDetail(100L, 1L, 10L, "수정 제목", TaskStatus.PENDING);
 
         when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
                 .thenReturn(Optional.of(Mockito.mock(ProjectMember.class)));
         when(taskRepository.findById(100L)).thenReturn(Optional.of(task));
-        when(taskRepository.findDetailById(100L)).thenReturn(Optional.of(detail));
 
         TaskDetailResult result = taskCommandService.updateTitle(
                 new TaskUpdateTitleCommand(1L, 100L, 10L, "  수정 제목  ")
         );
 
-        assertSame(detail, result);
+        assertEquals(100L, result.taskId());
+        assertEquals("수정 제목", result.title());
         assertEquals("수정 제목", getFieldValue(task, "title"));
         verify(permissionChecker, never()).hasTaskPermission(eq(1L), eq(10L), eq(TaskPermission.TASK_OVERWRITE));
     }
@@ -242,17 +242,17 @@ class TaskCommandServiceTest {
     @Test
     void assignMe_whenValid_shouldCreateAssigneeWithActorId() {
         Task task = createTask(100L, 1L, 20L, "기존 제목", TaskStatus.PENDING);
-        TaskDetailResult detail = createDetail(100L, 1L, 20L, "기존 제목", TaskStatus.PENDING);
 
         when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
                 .thenReturn(Optional.of(Mockito.mock(ProjectMember.class)));
         when(taskRepository.findById(100L)).thenReturn(Optional.of(task));
         when(taskAssigneeRepository.existsByTaskIdAndUserId(100L, 10L)).thenReturn(false);
-        when(taskRepository.findDetailById(100L)).thenReturn(Optional.of(detail));
 
         TaskDetailResult result = taskCommandService.assignMe(new TaskAssignMeCommand(1L, 100L, 10L));
 
-        assertSame(detail, result);
+        assertEquals(100L, result.taskId());
+        assertEquals(1L, result.projectId());
+        assertEquals(TaskStatus.PENDING, result.status());
 
         ArgumentCaptor<TaskAssignee> assigneeCaptor = ArgumentCaptor.forClass(TaskAssignee.class);
         verify(taskAssigneeRepository).save(assigneeCaptor.capture());
@@ -314,18 +314,17 @@ class TaskCommandServiceTest {
     void unassignMe_whenInProgressLastAssignee_shouldRevertToPending() {
         Task task = createTask(100L, 1L, 20L, "기존 제목", TaskStatus.IN_PROGRESS);
         TaskAssignee taskAssignee = TaskAssignee.assign(100L, 10L, 20L);
-        TaskDetailResult detail = createDetail(100L, 1L, 20L, "기존 제목", TaskStatus.PENDING);
 
         when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
                 .thenReturn(Optional.of(Mockito.mock(ProjectMember.class)));
         when(taskRepository.findById(100L)).thenReturn(Optional.of(task));
         when(taskAssigneeRepository.findByTaskIdAndUserId(100L, 10L)).thenReturn(Optional.of(taskAssignee));
         when(taskAssigneeRepository.countByTaskId(100L)).thenReturn(0L);
-        when(taskRepository.findDetailById(100L)).thenReturn(Optional.of(detail));
 
         TaskDetailResult result = taskCommandService.unassignMe(new TaskUnassignMeCommand(1L, 100L, 10L));
 
-        assertSame(detail, result);
+        assertEquals(100L, result.taskId());
+        assertEquals(TaskStatus.PENDING, result.status());
         assertEquals(TaskStatus.PENDING, getFieldValue(task, "status"));
         verify(taskAssigneeRepository).delete(taskAssignee);
         verify(permissionChecker, never()).hasTaskPermission(1L, 10L, TaskPermission.TASK_ASSIGN);
@@ -383,18 +382,17 @@ class TaskCommandServiceTest {
     @Test
     void startTask_whenValid_shouldTransitionToInProgress() {
         Task task = createTask(100L, 1L, 20L, "기존 제목", TaskStatus.PENDING);
-        TaskDetailResult detail = createDetail(100L, 1L, 20L, "기존 제목", TaskStatus.IN_PROGRESS);
 
         when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
                 .thenReturn(Optional.of(Mockito.mock(ProjectMember.class)));
         when(taskRepository.findById(100L)).thenReturn(Optional.of(task));
         when(taskAssigneeRepository.countByTaskId(100L)).thenReturn(1L);
         when(taskAssigneeRepository.existsByTaskIdAndUserId(100L, 10L)).thenReturn(true);
-        when(taskRepository.findDetailById(100L)).thenReturn(Optional.of(detail));
 
         TaskDetailResult result = taskCommandService.startTask(new TaskStartCommand(1L, 100L, 10L));
 
-        assertSame(detail, result);
+        assertEquals(100L, result.taskId());
+        assertEquals(TaskStatus.IN_PROGRESS, result.status());
         assertEquals(TaskStatus.IN_PROGRESS, getFieldValue(task, "status"));
     }
 
@@ -467,17 +465,16 @@ class TaskCommandServiceTest {
     @Test
     void cancelStartTask_whenValid_shouldTransitionToPending() {
         Task task = createTask(100L, 1L, 20L, "기존 제목", TaskStatus.IN_PROGRESS);
-        TaskDetailResult detail = createDetail(100L, 1L, 20L, "기존 제목", TaskStatus.PENDING);
 
         when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
                 .thenReturn(Optional.of(Mockito.mock(ProjectMember.class)));
         when(taskRepository.findById(100L)).thenReturn(Optional.of(task));
         when(taskAssigneeRepository.existsByTaskIdAndUserId(100L, 10L)).thenReturn(true);
-        when(taskRepository.findDetailById(100L)).thenReturn(Optional.of(detail));
 
         TaskDetailResult result = taskCommandService.cancelStartTask(new TaskCancelStartCommand(1L, 100L, 10L));
 
-        assertSame(detail, result);
+        assertEquals(100L, result.taskId());
+        assertEquals(TaskStatus.PENDING, result.status());
         assertEquals(TaskStatus.PENDING, getFieldValue(task, "status"));
     }
 
@@ -513,17 +510,16 @@ class TaskCommandServiceTest {
     @Test
     void forceCompleteTask_whenValid_shouldTransitionToCompleted() {
         Task task = createTask(100L, 1L, 20L, "기존 제목", TaskStatus.IN_REVIEW);
-        TaskDetailResult detail = createDetail(100L, 1L, 20L, "기존 제목", TaskStatus.COMPLETED);
 
         when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
                 .thenReturn(Optional.of(Mockito.mock(ProjectMember.class)));
         when(permissionChecker.hasTaskPermission(1L, 10L, TaskPermission.TASK_FORCE_COMPLETE)).thenReturn(true);
         when(taskRepository.findById(100L)).thenReturn(Optional.of(task));
-        when(taskRepository.findDetailById(100L)).thenReturn(Optional.of(detail));
 
         TaskDetailResult result = taskCommandService.forceCompleteTask(new TaskForceCompleteCommand(1L, 100L, 10L));
 
-        assertSame(detail, result);
+        assertEquals(100L, result.taskId());
+        assertEquals(TaskStatus.COMPLETED, result.status());
         assertEquals(TaskStatus.COMPLETED, getFieldValue(task, "status"));
     }
 
