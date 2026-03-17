@@ -3,7 +3,6 @@ package com.example.workmanagement.domain.task.repository;
 import com.example.workmanagement.domain.task.domain.model.Task;
 import com.example.workmanagement.domain.task.domain.model.TaskStatus;
 import java.util.Collection;
-import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
