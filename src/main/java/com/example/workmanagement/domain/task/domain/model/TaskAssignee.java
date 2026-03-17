@@ -9,6 +9,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
@@ -61,6 +62,13 @@ public class TaskAssignee {
 
     public static TaskAssignee assign(Long taskId, Long userId, Long assignedBy) {
         return new TaskAssignee(taskId, userId, assignedBy);
+    }
+
+    @PrePersist
+    void prePersist() {
+        if (createdAt == null) {
+            createdAt = Instant.now();
+        }
     }
 
     private static Long validatePositiveId(Long id, String fieldName) {
