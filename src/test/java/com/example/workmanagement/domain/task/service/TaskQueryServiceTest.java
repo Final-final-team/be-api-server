@@ -3,15 +3,21 @@ package com.example.workmanagement.domain.task.service;
 import com.example.workmanagement.domain.project.entity.ProjectMember;
 import com.example.workmanagement.domain.project.entity.ProjectMemberStatus;
 import com.example.workmanagement.domain.project.repository.ProjectMemberRepository;
-import com.example.workmanagement.domain.task.domain.model.Task;
+import com.example.workmanagement.domain.task.domain.model.TaskPriority;
 import com.example.workmanagement.domain.task.domain.model.TaskStatus;
 import com.example.workmanagement.domain.task.error.TaskErrorCode;
 import com.example.workmanagement.domain.task.exception.TaskDomainException;
 import com.example.workmanagement.domain.task.repository.TaskRepository;
+import com.example.workmanagement.domain.task.service.result.TaskDetailResult;
+import com.example.workmanagement.domain.task.service.result.TaskPageResult;
+import com.example.workmanagement.domain.task.service.result.TaskSummaryResult;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -23,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -44,31 +51,14 @@ class TaskQueryServiceTest {
         );
 
         assertEquals(TaskErrorCode.TASK_PROJECT_MEMBERSHIP_REQUIRED, exception.errorCode());
-        verify(taskRepository, never()).existsByIdAndProjectId(anyLong(), anyLong());
-        verify(taskRepository, never()).findById(anyLong());
-    }
-
-    @Test
-    void findTask_whenProjectScopeMismatched_shouldThrowNotFound() {
-        when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
-                .thenReturn(Optional.of(Mockito.mock(ProjectMember.class)));
-        when(taskRepository.existsByIdAndProjectId(100L, 1L)).thenReturn(false);
-
-        TaskDomainException exception = assertThrows(
-                TaskDomainException.class,
-                () -> taskQueryService.findTask(1L, 100L, 10L)
-        );
-
-        assertEquals(TaskErrorCode.TASK_NOT_FOUND, exception.errorCode());
-        verify(taskRepository, never()).findById(anyLong());
+        verify(taskRepository, never()).findDetailById(anyLong());
     }
 
     @Test
     void findTask_whenTaskMissing_shouldThrowNotFound() {
         when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
                 .thenReturn(Optional.of(Mockito.mock(ProjectMember.class)));
-        when(taskRepository.existsByIdAndProjectId(100L, 1L)).thenReturn(true);
-        when(taskRepository.findById(100L)).thenReturn(Optional.empty());
+        when(taskRepository.findDetailById(100L)).thenReturn(Optional.empty());
 
         TaskDomainException exception = assertThrows(
                 TaskDomainException.class,
@@ -79,49 +69,86 @@ class TaskQueryServiceTest {
     }
 
     @Test
-    void findTask_whenValid_shouldReturnTask() {
-        Task task = Mockito.mock(Task.class);
+    void findTask_whenProjectScopeMismatched_shouldThrowNotFound() {
+        TaskDetailResult detailResult = createTaskDetail(100L, 2L);
 
         when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
                 .thenReturn(Optional.of(Mockito.mock(ProjectMember.class)));
-        when(taskRepository.existsByIdAndProjectId(100L, 1L)).thenReturn(true);
-        when(taskRepository.findById(100L)).thenReturn(Optional.of(task));
+        when(taskRepository.findDetailById(100L)).thenReturn(Optional.of(detailResult));
 
-        Task result = taskQueryService.findTask(1L, 100L, 10L);
+        TaskDomainException exception = assertThrows(
+                TaskDomainException.class,
+                () -> taskQueryService.findTask(1L, 100L, 10L)
+        );
 
-        assertSame(task, result);
+        assertEquals(TaskErrorCode.TASK_NOT_FOUND, exception.errorCode());
+    }
+
+    @Test
+    void findTask_whenValid_shouldReturnDetailResult() {
+        TaskDetailResult detailResult = createTaskDetail(100L, 1L);
+
+        when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
+                .thenReturn(Optional.of(Mockito.mock(ProjectMember.class)));
+        when(taskRepository.findDetailById(100L)).thenReturn(Optional.of(detailResult));
+
+        TaskDetailResult result = taskQueryService.findTask(1L, 100L, 10L);
+
+        assertSame(detailResult, result);
     }
 
     @Test
     void findTasks_withoutStatuses_shouldUseProjectOnlyQuery() {
         Pageable pageable = PageRequest.of(0, 20);
-        Page<Task> page = new PageImpl<>(List.of(Mockito.mock(Task.class)), pageable, 1);
+        TaskSummaryResult summary = createTaskSummary(100L, 1L);
+        Page<TaskSummaryResult> page = new PageImpl<>(List.of(summary), pageable, 1);
 
         when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
                 .thenReturn(Optional.of(Mockito.mock(ProjectMember.class)));
-        when(taskRepository.findAllByProjectId(1L, pageable)).thenReturn(page);
+        when(taskRepository.findSummaryByProjectId(1L, pageable)).thenReturn(page);
 
-        Page<Task> result = taskQueryService.findTasks(1L, 10L, null, pageable);
+        TaskPageResult<TaskSummaryResult> result = taskQueryService.findTasks(1L, 10L, null, pageable);
 
-        assertSame(page, result);
-        verify(taskRepository).findAllByProjectId(1L, pageable);
-        verify(taskRepository, never()).findAllByProjectIdAndStatusIn(anyLong(), any(), any(Pageable.class));
+        assertEquals(1, result.items().size());
+        assertEquals(1, result.totalElements());
+        assertEquals(summary.taskId(), result.items().getFirst().taskId());
+        verify(taskRepository).findSummaryByProjectId(1L, pageable);
+        verify(taskRepository, never()).findSummaryByProjectIdAndStatusIn(anyLong(), any(), any(Pageable.class));
     }
 
     @Test
     void findTasks_withStatuses_shouldUseStatusFilterQuery() {
         Pageable pageable = PageRequest.of(0, 20);
         List<TaskStatus> statuses = List.of(TaskStatus.PENDING, TaskStatus.IN_PROGRESS);
-        Page<Task> page = new PageImpl<>(List.of(Mockito.mock(Task.class)), pageable, 1);
+        TaskSummaryResult summary = createTaskSummary(100L, 1L);
+        Page<TaskSummaryResult> page = new PageImpl<>(List.of(summary), pageable, 1);
 
         when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
                 .thenReturn(Optional.of(Mockito.mock(ProjectMember.class)));
-        when(taskRepository.findAllByProjectIdAndStatusIn(1L, statuses, pageable)).thenReturn(page);
+        when(taskRepository.findSummaryByProjectIdAndStatusIn(1L, statuses, pageable)).thenReturn(page);
 
-        Page<Task> result = taskQueryService.findTasks(1L, 10L, statuses, pageable);
+        TaskPageResult<TaskSummaryResult> result = taskQueryService.findTasks(1L, 10L, statuses, pageable);
 
-        assertSame(page, result);
-        verify(taskRepository).findAllByProjectIdAndStatusIn(1L, statuses, pageable);
+        assertEquals(1, result.items().size());
+        assertEquals(summary.taskId(), result.items().getFirst().taskId());
+        verify(taskRepository).findSummaryByProjectIdAndStatusIn(1L, statuses, pageable);
+    }
+
+    @Test
+    void findTasks_whenRequestedSizeTooLarge_shouldClampToMax() {
+        Pageable requested = PageRequest.of(0, 1000);
+        Pageable clamped = PageRequest.of(0, 1000, requested.getSort());
+        Page<TaskSummaryResult> page = new PageImpl<>(List.of(createTaskSummary(100L, 1L)), PageRequest.of(0, 100), 1);
+
+        when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
+                .thenReturn(Optional.of(Mockito.mock(ProjectMember.class)));
+        when(taskRepository.findSummaryByProjectId(eq(1L), any(Pageable.class))).thenReturn(page);
+
+        taskQueryService.findTasks(1L, 10L, null, clamped);
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(taskRepository).findSummaryByProjectId(eq(1L), pageableCaptor.capture());
+        assertEquals(100, pageableCaptor.getValue().getPageSize());
     }
 
     @Test
@@ -137,6 +164,38 @@ class TaskQueryServiceTest {
         );
 
         assertEquals(TaskErrorCode.TASK_STATUS_INVALID, exception.errorCode());
-        verify(taskRepository, never()).findAllByProjectIdAndStatusIn(anyLong(), any(), any(Pageable.class));
+        verify(taskRepository, never()).findSummaryByProjectIdAndStatusIn(anyLong(), any(), any(Pageable.class));
+        verify(taskRepository, never()).findSummaryByProjectId(anyLong(), any(Pageable.class));
+    }
+
+    private TaskDetailResult createTaskDetail(Long taskId, Long projectId) {
+        return new TaskDetailResult(
+                taskId,
+                projectId,
+                101L,
+                "업무 제목",
+                "업무 설명",
+                TaskStatus.IN_PROGRESS,
+                TaskPriority.HIGH,
+                LocalDate.of(2026, 3, 17),
+                LocalDate.of(2026, 3, 20),
+                Instant.parse("2026-03-17T05:00:00Z"),
+                Instant.parse("2026-03-17T06:00:00Z")
+        );
+    }
+
+    private TaskSummaryResult createTaskSummary(Long taskId, Long projectId) {
+        return new TaskSummaryResult(
+                taskId,
+                projectId,
+                "업무 제목",
+                TaskStatus.IN_PROGRESS,
+                TaskPriority.HIGH,
+                LocalDate.of(2026, 3, 17),
+                LocalDate.of(2026, 3, 20),
+                101L,
+                Instant.parse("2026-03-17T05:00:00Z"),
+                Instant.parse("2026-03-17T06:00:00Z")
+        );
     }
 }
