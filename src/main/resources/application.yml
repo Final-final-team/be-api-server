@@ -88,3 +88,13 @@ logging:
   level:
     org.hibernate.SQL: DEBUG
     org.hibernate.orm.jdbc.bind: TRACE
+
+review:
+  storage:
+    enabled: ${REVIEW_STORAGE_ENABLED:false}
+    bucket: ${REVIEW_STORAGE_BUCKET:}
+    region: ${REVIEW_STORAGE_REGION:ap-northeast-2}
+    key-prefix: ${REVIEW_STORAGE_KEY_PREFIX:uploads/review}
+    upload-ttl: ${REVIEW_STORAGE_UPLOAD_TTL:5m}
+    download-ttl: ${REVIEW_STORAGE_DOWNLOAD_TTL:5m}
+    endpoint: ${REVIEW_STORAGE_ENDPOINT:}
