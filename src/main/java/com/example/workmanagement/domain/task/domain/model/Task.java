@@ -25,7 +25,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
-@Table
+@Table(name = "tasks")
 @EntityListeners(AuditingEntityListener.class)
 @Accessors(fluent = true)
 @Getter
