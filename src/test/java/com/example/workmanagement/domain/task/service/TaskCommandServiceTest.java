@@ -246,7 +246,6 @@ class TaskCommandServiceTest {
 
         when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
                 .thenReturn(Optional.of(Mockito.mock(ProjectMember.class)));
-        when(permissionChecker.hasTaskPermission(1L, 10L, TaskPermission.TASK_ASSIGN)).thenReturn(true);
         when(taskRepository.findById(100L)).thenReturn(Optional.of(task));
         when(taskAssigneeRepository.existsByTaskIdAndUserId(100L, 10L)).thenReturn(false);
         when(taskRepository.findDetailById(100L)).thenReturn(Optional.of(detail));
@@ -260,6 +259,21 @@ class TaskCommandServiceTest {
         assertEquals(100L, getFieldValue(assigneeCaptor.getValue(), "taskId"));
         assertEquals(10L, getFieldValue(assigneeCaptor.getValue(), "userId"));
         assertEquals(10L, getFieldValue(assigneeCaptor.getValue(), "assignedBy"));
+        verify(permissionChecker, never()).hasTaskPermission(1L, 10L, TaskPermission.TASK_ASSIGN);
+    }
+
+    @Test
+    void assignMe_whenNotProjectMember_shouldThrowForbidden() {
+        when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
+                .thenReturn(Optional.empty());
+
+        TaskDomainException exception = assertThrows(
+                TaskDomainException.class,
+                () -> taskCommandService.assignMe(new TaskAssignMeCommand(1L, 100L, 10L))
+        );
+
+        assertEquals(TaskErrorCode.TASK_PROJECT_MEMBERSHIP_REQUIRED, exception.errorCode());
+        verify(taskAssigneeRepository, never()).save(any(TaskAssignee.class));
     }
 
     @Test
@@ -282,6 +296,21 @@ class TaskCommandServiceTest {
     }
 
     @Test
+    void unassignTask_whenNoAssignPermission_shouldThrowForbidden() {
+        when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
+                .thenReturn(Optional.of(Mockito.mock(ProjectMember.class)));
+        when(permissionChecker.hasTaskPermission(1L, 10L, TaskPermission.TASK_ASSIGN)).thenReturn(false);
+
+        TaskDomainException exception = assertThrows(
+                TaskDomainException.class,
+                () -> taskCommandService.unassignTask(new TaskUnassignCommand(1L, 100L, 10L, 30L))
+        );
+
+        assertEquals(TaskErrorCode.TASK_ASSIGN_FORBIDDEN, exception.errorCode());
+        verify(taskRepository, never()).findById(any());
+    }
+
+    @Test
     void unassignMe_whenInProgressLastAssignee_shouldRevertToPending() {
         Task task = createTask(100L, 1L, 20L, "기존 제목", TaskStatus.IN_PROGRESS);
         TaskAssignee taskAssignee = TaskAssignee.assign(100L, 10L, 20L);
@@ -289,7 +318,6 @@ class TaskCommandServiceTest {
 
         when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
                 .thenReturn(Optional.of(Mockito.mock(ProjectMember.class)));
-        when(permissionChecker.hasTaskPermission(1L, 10L, TaskPermission.TASK_ASSIGN)).thenReturn(true);
         when(taskRepository.findById(100L)).thenReturn(Optional.of(task));
         when(taskAssigneeRepository.findByTaskIdAndUserId(100L, 10L)).thenReturn(Optional.of(taskAssignee));
         when(taskAssigneeRepository.countByTaskId(100L)).thenReturn(0L);
@@ -300,6 +328,21 @@ class TaskCommandServiceTest {
         assertSame(detail, result);
         assertEquals(TaskStatus.PENDING, getFieldValue(task, "status"));
         verify(taskAssigneeRepository).delete(taskAssignee);
+        verify(permissionChecker, never()).hasTaskPermission(1L, 10L, TaskPermission.TASK_ASSIGN);
+    }
+
+    @Test
+    void unassignMe_whenNotProjectMember_shouldThrowForbidden() {
+        when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
+                .thenReturn(Optional.empty());
+
+        TaskDomainException exception = assertThrows(
+                TaskDomainException.class,
+                () -> taskCommandService.unassignMe(new TaskUnassignMeCommand(1L, 100L, 10L))
+        );
+
+        assertEquals(TaskErrorCode.TASK_PROJECT_MEMBERSHIP_REQUIRED, exception.errorCode());
+        verify(taskAssigneeRepository, never()).delete(any(TaskAssignee.class));
     }
 
     @Test

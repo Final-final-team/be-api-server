@@ -15,6 +15,7 @@ import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -165,6 +166,14 @@ public class Task {
             throw new TaskDomainException(TaskErrorCode.TASK_STATUS_TRANSITION_NOT_ALLOWED);
         }
         this.status = TaskStatus.COMPLETED;
+    }
+
+    public boolean belongsToProject(Long projectId) {
+        return Objects.equals(this.projectId, projectId);
+    }
+
+    public boolean isAuthor(Long userId) {
+        return Objects.equals(this.authorId, userId);
     }
 
     private static Long validatePositiveId(Long id, String fieldName) {

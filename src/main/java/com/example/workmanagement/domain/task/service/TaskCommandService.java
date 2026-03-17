@@ -72,7 +72,7 @@ public class TaskCommandService {
                 command.priority()
         ));
 
-        return loadTaskDetail(created.id());
+        return loadTaskDetail(created);
     }
 
     // ----- 업무 수정
@@ -126,22 +126,133 @@ public class TaskCommandService {
 
     public TaskDetailResult assignTask(TaskAssignCommand command) {
         requireCommand(command, "assignTask");
-        return assignTaskInternal(command.projectId(), command.taskId(), command.actorId(), command.userId());
+
+        Long projectId = command.projectId();
+        Long taskId = command.taskId();
+        Long actorId = command.actorId();
+        Long targetUserId = command.userId();
+
+        if (Objects.equals(actorId, targetUserId)) {
+            throw new TaskDomainException(TaskErrorCode.TASK_ACTOR_IS_TARGET);
+        }
+
+        validatePositiveId(projectId, "projectId");
+        validatePositiveId(taskId, "taskId");
+        validatePositiveId(actorId, "actorId");
+        validatePositiveId(targetUserId, "targetUserId");
+
+        ensureProjectMembership(projectId, actorId);
+        ensureAssignPermission(projectId, actorId);
+        ensureProjectMembership(projectId, targetUserId);
+
+        Task task = loadTaskInProject(projectId, taskId);
+        task.ensureAssignableStatus();
+
+        if (taskAssigneeRepository.existsByTaskIdAndUserId(taskId, targetUserId)) {
+            throw new TaskDomainException(TaskErrorCode.TASK_ALREADY_ASSIGNED);
+        }
+
+        try {
+            taskAssigneeRepository.save(TaskAssignee.assign(taskId, targetUserId, actorId));
+        } catch (DataIntegrityViolationException exception) {
+            throw new TaskDomainException(TaskErrorCode.TASK_ALREADY_ASSIGNED);
+        }
+
+        return loadTaskDetail(task);
     }
 
     public TaskDetailResult assignMe(TaskAssignMeCommand command) {
         requireCommand(command, "assignMe");
-        return assignTaskInternal(command.projectId(), command.taskId(), command.actorId(), command.actorId());
+
+        Long projectId = command.projectId();
+        Long taskId = command.taskId();
+        Long actorId = command.actorId();
+
+        validatePositiveId(projectId, "projectId");
+        validatePositiveId(taskId, "taskId");
+        validatePositiveId(actorId, "actorId");
+
+        ensureProjectMembership(projectId, actorId);
+
+        Task task = loadTaskInProject(projectId, taskId);
+        task.ensureAssignableStatus();
+
+        if (taskAssigneeRepository.existsByTaskIdAndUserId(taskId, actorId)) {
+            throw new TaskDomainException(TaskErrorCode.TASK_ALREADY_ASSIGNED);
+        }
+
+        try {
+            taskAssigneeRepository.save(TaskAssignee.assign(taskId, actorId, actorId));
+        } catch (DataIntegrityViolationException exception) {
+            throw new TaskDomainException(TaskErrorCode.TASK_ALREADY_ASSIGNED);
+        }
+
+        return loadTaskDetail(task);
     }
 
     public TaskDetailResult unassignTask(TaskUnassignCommand command) {
         requireCommand(command, "unassignTask");
-        return unassignTaskInternal(command.projectId(), command.taskId(), command.actorId(), command.userId());
+
+        Long projectId = command.projectId();
+        Long taskId = command.taskId();
+        Long actorId = command.actorId();
+        Long targetUserId = command.userId();
+
+        if (Objects.equals(actorId, targetUserId)) {
+            throw new TaskDomainException(TaskErrorCode.TASK_ACTOR_IS_TARGET);
+        }
+
+        validatePositiveId(projectId, "projectId");
+        validatePositiveId(taskId, "taskId");
+        validatePositiveId(actorId, "actorId");
+        validatePositiveId(targetUserId, "targetUserId");
+
+        ensureProjectMembership(projectId, actorId);
+        ensureAssignPermission(projectId, actorId);
+
+        Task task = loadTaskInProject(projectId, taskId);
+        task.ensureAssignableStatus();
+
+        TaskAssignee taskAssignee = taskAssigneeRepository.findByTaskIdAndUserId(taskId, targetUserId)
+                .orElseThrow(() -> new TaskDomainException(TaskErrorCode.TASK_ASSIGNEE_NOT_ASSIGNED));
+
+        taskAssigneeRepository.delete(taskAssignee);
+
+        long remainingAssigneeCount = taskAssigneeRepository.countByTaskId(taskId);
+        if (remainingAssigneeCount == 0L) {
+            task.revertToPendingIfInProgress();
+        }
+
+        return loadTaskDetail(task);
     }
 
     public TaskDetailResult unassignMe(TaskUnassignMeCommand command) {
         requireCommand(command, "unassignMe");
-        return unassignTaskInternal(command.projectId(), command.taskId(), command.actorId(), command.actorId());
+
+        Long projectId = command.projectId();
+        Long taskId = command.taskId();
+        Long actorId = command.actorId();
+
+        validatePositiveId(projectId, "projectId");
+        validatePositiveId(taskId, "taskId");
+        validatePositiveId(actorId, "actorId");
+
+        ensureProjectMembership(projectId, actorId);
+
+        Task task = loadTaskInProject(projectId, taskId);
+        task.ensureAssignableStatus();
+
+        TaskAssignee taskAssignee = taskAssigneeRepository.findByTaskIdAndUserId(taskId, actorId)
+                .orElseThrow(() -> new TaskDomainException(TaskErrorCode.TASK_ASSIGNEE_NOT_ASSIGNED));
+
+        taskAssigneeRepository.delete(taskAssignee);
+
+        long remainingAssigneeCount = taskAssigneeRepository.countByTaskId(taskId);
+        if (remainingAssigneeCount == 0L) {
+            task.revertToPendingIfInProgress();
+        }
+
+        return loadTaskDetail(task);
     }
 
     // ----- 업무 상태 변경
@@ -160,7 +271,7 @@ public class TaskCommandService {
         ensureStartPermission(task.id(), command.actorId());
 
         task.start();
-        return loadTaskDetail(task.id());
+        return loadTaskDetail(task);
     }
 
     public TaskDetailResult cancelStartTask(TaskCancelStartCommand command) {
@@ -176,7 +287,7 @@ public class TaskCommandService {
         ensureStartPermission(task.id(), command.actorId());
 
         task.cancelStart();
-        return loadTaskDetail(task.id());
+        return loadTaskDetail(task);
     }
 
     public TaskDetailResult forceCompleteTask(TaskForceCompleteCommand command) {
@@ -192,7 +303,7 @@ public class TaskCommandService {
         Task task = loadTaskInProject(command.projectId(), command.taskId());
         task.forceComplete();
 
-        return loadTaskDetail(task.id());
+        return loadTaskDetail(task);
     }
 
     // ----- helpers
@@ -209,77 +320,34 @@ public class TaskCommandService {
 
         updater.accept(task);
 
-        return loadTaskDetail(task.id());
-    }
-
-    private TaskDetailResult assignTaskInternal(Long projectId, Long taskId, Long actorId, Long targetUserId) {
-        validatePositiveId(projectId, "projectId");
-        validatePositiveId(taskId, "taskId");
-        validatePositiveId(actorId, "actorId");
-        validatePositiveId(targetUserId, "targetUserId");
-
-        ensureProjectMembership(projectId, actorId);
-        ensureAssignPermission(projectId, actorId);
-        ensureProjectMembership(projectId, targetUserId);
-
-        Task task = loadTaskInProject(projectId, taskId);
-        task.ensureAssignableStatus();
-
-        if (taskAssigneeRepository.existsByTaskIdAndUserId(task.id(), targetUserId)) {
-            throw new TaskDomainException(TaskErrorCode.TASK_ALREADY_ASSIGNED);
-        }
-
-        try {
-            taskAssigneeRepository.save(TaskAssignee.assign(task.id(), targetUserId, actorId));
-        } catch (DataIntegrityViolationException exception) {
-            throw new TaskDomainException(TaskErrorCode.TASK_ALREADY_ASSIGNED);
-        }
-
-        return loadTaskDetail(task.id());
-    }
-
-    private TaskDetailResult unassignTaskInternal(Long projectId, Long taskId, Long actorId, Long targetUserId) {
-        validatePositiveId(projectId, "projectId");
-        validatePositiveId(taskId, "taskId");
-        validatePositiveId(actorId, "actorId");
-        validatePositiveId(targetUserId, "targetUserId");
-
-        ensureProjectMembership(projectId, actorId);
-        ensureAssignPermission(projectId, actorId);
-
-        Task task = loadTaskInProject(projectId, taskId);
-        task.ensureAssignableStatus();
-
-        TaskAssignee taskAssignee = taskAssigneeRepository.findByTaskIdAndUserId(task.id(), targetUserId)
-                .orElseThrow(() -> new TaskDomainException(TaskErrorCode.TASK_ASSIGNEE_NOT_ASSIGNED));
-
-        taskAssigneeRepository.delete(taskAssignee);
-
-        long remainingAssigneeCount = taskAssigneeRepository.countByTaskId(task.id());
-        if (remainingAssigneeCount == 0L) {
-            task.revertToPendingIfInProgress();
-        }
-
-        return loadTaskDetail(task.id());
+        return loadTaskDetail(task);
     }
 
     private Task loadTaskInProject(Long projectId, Long taskId) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new TaskDomainException(TaskErrorCode.TASK_NOT_FOUND));
 
-        if (!Objects.equals(task.projectId(), projectId)) {
+        if (!task.belongsToProject(projectId)) {
             throw new TaskDomainException(TaskErrorCode.TASK_NOT_FOUND);
         }
 
         return task;
     }
 
-    private TaskDetailResult loadTaskDetail(Long taskId) {
-        return taskRepository.findDetailById(taskId)
-                .orElseThrow(() -> new TaskDomainException(
-                        TaskErrorCode.TASK_INTERNAL_SERVER_ERROR,
-                        "failed to load task detail"
-                ));
+    private TaskDetailResult loadTaskDetail(Task task) {
+        return new TaskDetailResult(
+                task.id(),
+                task.projectId(),
+                task.authorId(),
+                task.title(),
+                task.description(),
+                task.status(),
+                task.priority(),
+                task.startDate(),
+                task.dueDate(),
+                task.createdAt(),
+                task.updatedAt()
+        );
     }
 
     private void ensureProjectMembership(Long projectId, Long actorId) {
@@ -323,7 +391,7 @@ public class TaskCommandService {
     }
 
     private void ensureUpdatePermission(Task task, Long actorId) {
-        if (Objects.equals(task.authorId(), actorId)) {
+        if (task.isAuthor(actorId)) {
             return;
         }
 
