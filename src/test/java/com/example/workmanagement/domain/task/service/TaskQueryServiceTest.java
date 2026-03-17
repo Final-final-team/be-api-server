@@ -23,6 +23,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -105,14 +106,19 @@ class TaskQueryServiceTest {
 
         when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
                 .thenReturn(Optional.of(Mockito.mock(ProjectMember.class)));
-        when(taskRepository.findSummaryByProjectId(1L, pageable)).thenReturn(page);
+        when(taskRepository.findSummaryByProjectId(eq(1L), any(Pageable.class))).thenReturn(page);
 
         TaskPageResult<TaskSummaryResult> result = taskQueryService.findTasks(1L, 10L, null, pageable);
 
         assertEquals(1, result.items().size());
         assertEquals(1, result.totalElements());
         assertEquals(summary.taskId(), result.items().getFirst().taskId());
-        verify(taskRepository).findSummaryByProjectId(1L, pageable);
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(taskRepository).findSummaryByProjectId(eq(1L), pageableCaptor.capture());
+        assertEquals(20, pageableCaptor.getValue().getPageSize());
+        assertEquals(Sort.Direction.DESC, pageableCaptor.getValue().getSort().getOrderFor("createdAt").getDirection());
+        assertEquals(Sort.Direction.DESC, pageableCaptor.getValue().getSort().getOrderFor("id").getDirection());
         verify(taskRepository, never()).findSummaryByProjectIdAndStatusIn(anyLong(), any(), any(Pageable.class));
     }
 
@@ -125,30 +131,68 @@ class TaskQueryServiceTest {
 
         when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
                 .thenReturn(Optional.of(Mockito.mock(ProjectMember.class)));
-        when(taskRepository.findSummaryByProjectIdAndStatusIn(1L, statuses, pageable)).thenReturn(page);
+        when(taskRepository.findSummaryByProjectIdAndStatusIn(eq(1L), eq(statuses), any(Pageable.class))).thenReturn(page);
 
         TaskPageResult<TaskSummaryResult> result = taskQueryService.findTasks(1L, 10L, statuses, pageable);
 
         assertEquals(1, result.items().size());
         assertEquals(summary.taskId(), result.items().getFirst().taskId());
-        verify(taskRepository).findSummaryByProjectIdAndStatusIn(1L, statuses, pageable);
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(taskRepository).findSummaryByProjectIdAndStatusIn(eq(1L), eq(statuses), pageableCaptor.capture());
+        assertEquals(20, pageableCaptor.getValue().getPageSize());
+        assertEquals(Sort.Direction.DESC, pageableCaptor.getValue().getSort().getOrderFor("createdAt").getDirection());
+        assertEquals(Sort.Direction.DESC, pageableCaptor.getValue().getSort().getOrderFor("id").getDirection());
     }
 
     @Test
     void findTasks_whenRequestedSizeTooLarge_shouldClampToMax() {
         Pageable requested = PageRequest.of(0, 1000);
-        Pageable clamped = PageRequest.of(0, 1000, requested.getSort());
         Page<TaskSummaryResult> page = new PageImpl<>(List.of(createTaskSummary(100L, 1L)), PageRequest.of(0, 100), 1);
 
         when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
                 .thenReturn(Optional.of(Mockito.mock(ProjectMember.class)));
         when(taskRepository.findSummaryByProjectId(eq(1L), any(Pageable.class))).thenReturn(page);
 
-        taskQueryService.findTasks(1L, 10L, null, clamped);
+        taskQueryService.findTasks(1L, 10L, null, requested);
 
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
         verify(taskRepository).findSummaryByProjectId(eq(1L), pageableCaptor.capture());
         assertEquals(100, pageableCaptor.getValue().getPageSize());
+    }
+
+    @Test
+    void findTasks_whenSortContainsDisallowedField_shouldFallbackToDefaultSort() {
+        Pageable requested = PageRequest.of(0, 20, Sort.by(Sort.Order.asc("unknownField")));
+        Page<TaskSummaryResult> page = new PageImpl<>(List.of(createTaskSummary(100L, 1L)), PageRequest.of(0, 20), 1);
+
+        when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
+                .thenReturn(Optional.of(Mockito.mock(ProjectMember.class)));
+        when(taskRepository.findSummaryByProjectId(eq(1L), any(Pageable.class))).thenReturn(page);
+
+        taskQueryService.findTasks(1L, 10L, null, requested);
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(taskRepository).findSummaryByProjectId(eq(1L), pageableCaptor.capture());
+        assertEquals(Sort.Direction.DESC, pageableCaptor.getValue().getSort().getOrderFor("createdAt").getDirection());
+        assertEquals(Sort.Direction.DESC, pageableCaptor.getValue().getSort().getOrderFor("id").getDirection());
+    }
+
+    @Test
+    void findTasks_whenSortAllowedWithoutId_shouldAppendIdTiebreaker() {
+        Pageable requested = PageRequest.of(0, 20, Sort.by(Sort.Order.asc("dueDate")));
+        Page<TaskSummaryResult> page = new PageImpl<>(List.of(createTaskSummary(100L, 1L)), PageRequest.of(0, 20), 1);
+
+        when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
+                .thenReturn(Optional.of(Mockito.mock(ProjectMember.class)));
+        when(taskRepository.findSummaryByProjectId(eq(1L), any(Pageable.class))).thenReturn(page);
+
+        taskQueryService.findTasks(1L, 10L, null, requested);
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(taskRepository).findSummaryByProjectId(eq(1L), pageableCaptor.capture());
+        assertEquals(Sort.Direction.ASC, pageableCaptor.getValue().getSort().getOrderFor("dueDate").getDirection());
+        assertEquals(Sort.Direction.DESC, pageableCaptor.getValue().getSort().getOrderFor("id").getDirection());
     }
 
     @Test

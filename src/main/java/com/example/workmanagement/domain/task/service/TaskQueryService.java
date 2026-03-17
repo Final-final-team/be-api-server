@@ -9,11 +9,14 @@ import com.example.workmanagement.domain.task.repository.TaskRepository;
 import com.example.workmanagement.domain.task.service.result.TaskDetailResult;
 import com.example.workmanagement.domain.task.service.result.TaskPageResult;
 import com.example.workmanagement.domain.task.service.result.TaskSummaryResult;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +26,19 @@ public class TaskQueryService {
 
     private static final int DEFAULT_PAGE_SIZE = 20;
     private static final int MAX_PAGE_SIZE = 100;
+    private static final Set<String> ALLOWED_SORT_PROPERTIES = Set.of(
+            "id",
+            "createdAt",
+            "updatedAt",
+            "startDate",
+            "dueDate",
+            "priority",
+            "status"
+    );
+    private static final Sort DEFAULT_SORT = Sort.by(
+            Sort.Order.desc("createdAt"),
+            Sort.Order.desc("id")
+    );
 
     private final TaskRepository taskRepository;
     private final ProjectMemberRepository projectMemberRepository;
@@ -100,13 +116,41 @@ public class TaskQueryService {
 
     private static Pageable sanitizePageable(Pageable pageable) {
         Pageable resolved = pageable == null
-                ? PageRequest.of(0, DEFAULT_PAGE_SIZE)
+                ? PageRequest.of(0, DEFAULT_PAGE_SIZE, DEFAULT_SORT)
                 : pageable;
 
         int safePage = Math.max(resolved.getPageNumber(), 0);
         int requestedSize = resolved.getPageSize() <= 0 ? DEFAULT_PAGE_SIZE : resolved.getPageSize();
         int safeSize = Math.min(requestedSize, MAX_PAGE_SIZE);
-        return PageRequest.of(safePage, safeSize, resolved.getSort());
+        Sort safeSort = sanitizeSort(resolved.getSort());
+
+        return PageRequest.of(safePage, safeSize, safeSort);
+    }
+
+    private static Sort sanitizeSort(Sort requestedSort) {
+        if (requestedSort == null || requestedSort.isUnsorted()) {
+            return DEFAULT_SORT;
+        }
+
+        List<Sort.Order> allowedOrders = new ArrayList<>();
+        for (Sort.Order order : requestedSort) {
+            if (ALLOWED_SORT_PROPERTIES.contains(order.getProperty())) {
+                allowedOrders.add(order);
+            }
+        }
+
+        if (allowedOrders.isEmpty()) {
+            return DEFAULT_SORT;
+        }
+
+        boolean hasIdOrder = allowedOrders.stream()
+                .anyMatch(order -> "id".equals(order.getProperty()));
+
+        if (!hasIdOrder) {
+            allowedOrders.add(Sort.Order.desc("id"));
+        }
+
+        return Sort.by(allowedOrders);
     }
 
     private static void validatePositiveId(Long id, String fieldName) {
