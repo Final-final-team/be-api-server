@@ -27,7 +27,7 @@ public class MockTask {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
-    private MockTaskStatus status = MockTaskStatus.TODO;
+    private MockTaskStatus status = MockTaskStatus.PENDING;
 
     protected MockTask() {
     }
