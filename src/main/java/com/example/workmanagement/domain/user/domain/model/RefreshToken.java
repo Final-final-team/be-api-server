@@ -152,12 +152,4 @@ public class RefreshToken {
             throw new UserDomainException(UserErrorCode.USER_INVALID_ARGUMENT, "리프레시 토큰 만료시각은 발급시각 이후여야 합니다.");
         }
     }
-
-    public User user() {
-        return user;
-    }
-
-    public Instant expiresAt() {
-        return expiresAt;
-    }
 }
