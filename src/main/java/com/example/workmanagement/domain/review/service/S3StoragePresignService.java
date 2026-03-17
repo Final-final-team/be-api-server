@@ -8,8 +8,6 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.UUID;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Component;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.regions.Region;
@@ -26,9 +24,10 @@ import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequ
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
-@Component
-@ConditionalOnProperty(prefix = "review.storage", name = "enabled", havingValue = "true")
 public class S3StoragePresignService implements StoragePresignService {
+    // 정책 통합 정리본 반영:
+    // object key 생성과 presign 발급은 현재 review 첨부 안에서 처리하지만,
+    // 최종적으로는 전역 upload policy, upload status 저장소, orphan 정리 배치와 통합되어야 한다.
 
     private static final DateTimeFormatter YEAR_MONTH_FORMATTER = DateTimeFormatter.ofPattern("yyyy/MM");
 

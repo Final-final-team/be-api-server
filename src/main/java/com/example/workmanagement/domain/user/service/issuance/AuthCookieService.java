@@ -3,6 +3,7 @@ package com.example.workmanagement.domain.user.service.issuance;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Service;
+import com.example.workmanagement.global.security.config.AuthProperties;
 
 import java.time.Duration;
 
@@ -23,9 +24,11 @@ public class AuthCookieService {
     private static final String REFRESH_TOKEN_PATH = "/api/auth/refresh";
     private static final String REFRESH_TOKEN_SAME_SITE = "None";
 
-    // 크로스 사이트(예: Vercel 프론트)에서도 쿠키가 전송되려면 Secure + SameSite=None 조합이 필요하다.
-    // ALB에서 TLS가 종료되는 구조에서도 브라우저-ALB 구간은 HTTPS이므로 Secure를 고정 적용한다.
-    private static final boolean COOKIE_SECURE = true;
+    private final AuthProperties authProperties;
+
+    public AuthCookieService(AuthProperties authProperties) {
+        this.authProperties = authProperties;
+    }
 
     // ----- access token
 
@@ -39,7 +42,7 @@ public class AuthCookieService {
     ) {
         ResponseCookie cookie = ResponseCookie.from(ACCESS_TOKEN_COOKIE_NAME, accessToken)
                 .httpOnly(true)
-                .secure(COOKIE_SECURE)
+                .secure(authProperties.cookieSecure())
                 .path(ACCESS_TOKEN_PATH)
                 .sameSite(ACCESS_TOKEN_SAME_SITE)
                 .maxAge(ttl)
@@ -52,7 +55,7 @@ public class AuthCookieService {
         // 값은 비우고 maxAge=0으로 즉시 만료
         ResponseCookie cookie = ResponseCookie.from(ACCESS_TOKEN_COOKIE_NAME, "")
                 .httpOnly(true)
-                .secure(COOKIE_SECURE)
+                .secure(authProperties.cookieSecure())
                 .path(ACCESS_TOKEN_PATH)
                 .sameSite(ACCESS_TOKEN_SAME_SITE)
                 .maxAge(0)
@@ -75,7 +78,7 @@ public class AuthCookieService {
     ) {
         ResponseCookie cookie = ResponseCookie.from(REFRESH_TOKEN_COOKIE_NAME, refreshToken)
                 .httpOnly(true)
-                .secure(COOKIE_SECURE)
+                .secure(authProperties.cookieSecure())
                 .path(REFRESH_TOKEN_PATH)
                 .sameSite(REFRESH_TOKEN_SAME_SITE)
                 .maxAge(ttl)
@@ -90,7 +93,7 @@ public class AuthCookieService {
         // refresh 쿠키도 동일 path로 만료해야 브라우저에서 정확히 제거된다.
         ResponseCookie cookie = ResponseCookie.from(REFRESH_TOKEN_COOKIE_NAME, "")
                 .httpOnly(true)
-                .secure(COOKIE_SECURE)
+                .secure(authProperties.cookieSecure())
                 .path(REFRESH_TOKEN_PATH)
                 .sameSite(REFRESH_TOKEN_SAME_SITE)
                 .maxAge(0)

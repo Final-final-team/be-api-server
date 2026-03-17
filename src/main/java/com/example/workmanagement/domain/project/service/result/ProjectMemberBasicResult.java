@@ -6,6 +6,8 @@ public record ProjectMemberBasicResult(
         Long projectMemberId,
         Long projectId,
         Long userId,
+        String nickname,
+        String email,
         ProjectMemberStatus status
 ) {
 }

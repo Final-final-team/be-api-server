@@ -33,8 +33,6 @@ import java.io.IOException;
 @Component
 public class OidcAuthenticationSuccessHandler implements AuthenticationSuccessHandler {
 
-    private static final boolean COOKIE_SECURE = true;
-
     private final SocialLoginService socialLoginService;
     private final AccessTokenService accessTokenService;
     private final AuthCookieService authCookieService;
@@ -110,7 +108,7 @@ public class OidcAuthenticationSuccessHandler implements AuthenticationSuccessHa
                 .path("/")
                 .maxAge(0)
                 .httpOnly(true)
-                .secure(COOKIE_SECURE)
+                .secure(authProperties.cookieSecure())
                 .sameSite("None")
                 .build();
         response.addHeader(HttpHeaders.SET_COOKIE, deleteSessionCookie.toString());

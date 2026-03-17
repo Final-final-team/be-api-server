@@ -29,6 +29,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/reviews/{reviewId}/attachments")
 @Tag(name = "검토 첨부", description = "검토 첨부 업로드, 다운로드, 삭제 API")
 public class ReviewAttachmentController {
+    // 정책 통합 정리본 반영:
+    // 현재 엔드포인트는 review 첨부 전용이다.
+    // 공통 upload 모듈 도입 후에는 presign/완료 API 가 전역 모듈로 이동하고
+    // review 는 uploadId 또는 storedFileId 를 연결하는 API 만 유지하는 방향이 맞다.
 
     private final ReviewCommandService reviewCommandService;
     private final ReviewQueryService reviewQueryService;

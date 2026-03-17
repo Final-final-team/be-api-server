@@ -86,6 +86,23 @@ public class Role {
         return (this.reviewPermissionBits & permission.getBit()) != 0;
     }
 
+    public void updateDefinition(String name, String description) {
+        if (Boolean.TRUE.equals(this.isSystem)) {
+            throw new IllegalStateException("system role cannot be updated");
+        }
+        this.name = Objects.requireNonNull(name, "name must not be null");
+        this.description = description;
+    }
+
+    public void updatePermissions(Long projectPermissionBits, Long taskPermissionBits, Long reviewPermissionBits) {
+        if (Boolean.TRUE.equals(this.isSystem)) {
+            throw new IllegalStateException("system role cannot be updated");
+        }
+        this.projectPermissionBits = Objects.requireNonNull(projectPermissionBits, "projectPermissionBits must not be null");
+        this.taskPermissionBits = Objects.requireNonNull(taskPermissionBits, "taskPermissionBits must not be null");
+        this.reviewPermissionBits = Objects.requireNonNull(reviewPermissionBits, "reviewPermissionBits must not be null");
+    }
+
     public static Role systemRole(
             Long projectId,
             String code,

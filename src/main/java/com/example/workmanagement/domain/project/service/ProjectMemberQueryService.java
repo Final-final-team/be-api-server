@@ -7,6 +7,8 @@ import com.example.workmanagement.domain.project.service.result.ProjectMemberBas
 import com.example.workmanagement.domain.project.service.result.ProjectMemberRoleResult;
 import com.example.workmanagement.domain.project.service.result.ProjectMemberRoleProjectionResult;
 import com.example.workmanagement.domain.project.service.result.ProjectMemberWithRolesResult;
+import com.example.workmanagement.domain.user.domain.model.User;
+import com.example.workmanagement.domain.user.repository.UserRepository;
 import com.example.workmanagement.global.role.entity.ProjectMemberRole;
 import com.example.workmanagement.global.role.entity.Role;
 import com.example.workmanagement.global.role.repository.ProjectMemberRoleRepository;
@@ -28,15 +30,18 @@ public class ProjectMemberQueryService {
     private final ProjectMemberRepository projectMemberRepository;
     private final ProjectMemberRoleRepository projectMemberRoleRepository;
     private final RoleRepository roleRepository;
+    private final UserRepository userRepository;
 
     public ProjectMemberQueryService(
             ProjectMemberRepository projectMemberRepository,
             ProjectMemberRoleRepository projectMemberRoleRepository,
-            RoleRepository roleRepository
+            RoleRepository roleRepository,
+            UserRepository userRepository
     ) {
         this.projectMemberRepository = projectMemberRepository;
         this.projectMemberRoleRepository = projectMemberRoleRepository;
         this.roleRepository = roleRepository;
+        this.userRepository = userRepository;
     }
 
     // policy: PJM-P-05 (LEFT/REMOVED 상태는 즉시 권한이 제거되므로 조회 대상에서 제외하고 ACTIVE 멤버만 반환)
@@ -136,10 +141,13 @@ public class ProjectMemberQueryService {
     }
 
     private ProjectMemberBasicResult toBasicResult(ProjectMember member) {
+        User user = userRepository.findById(member.getUserId()).orElse(null);
         return new ProjectMemberBasicResult(
                 member.getId(),
                 member.getProjectId(),
                 member.getUserId(),
+                user != null ? user.nickname() : null,
+                user != null ? user.email() : null,
                 member.getStatus()
         );
     }

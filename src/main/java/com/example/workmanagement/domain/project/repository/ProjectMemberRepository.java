@@ -11,5 +11,7 @@ import java.util.Optional;
 public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Long> {
     List<ProjectMember> findByProjectId(Long projectId); // 프로젝트에 속한 멤버 조회
     List<ProjectMember> findByUserId(Long userId); // 멤버가 속한 프로젝트 조회
+    List<ProjectMember> findByProjectIdAndStatus(Long projectId, ProjectMemberStatus status);
+    long countByProjectIdAndStatus(Long projectId, ProjectMemberStatus status);
     Optional<ProjectMember> findByProjectIdAndUserIdAndStatus(Long projectId, Long userId, ProjectMemberStatus status);
 }

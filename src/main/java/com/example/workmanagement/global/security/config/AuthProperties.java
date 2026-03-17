@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 public class AuthProperties {
 
     private String loginSuccessRedirectUrl;
+    private boolean cookieSecure = true;
 
     // Java record처럼 읽기 전용 느낌으로 쓰기 위한 네이밍
     public String loginSuccessRedirectUrl() {
@@ -21,5 +22,13 @@ public class AuthProperties {
 
     public void setLoginSuccessRedirectUrl(String loginSuccessRedirectUrl) {
         this.loginSuccessRedirectUrl = loginSuccessRedirectUrl;
+    }
+
+    public boolean cookieSecure() {
+        return cookieSecure;
+    }
+
+    public void setCookieSecure(boolean cookieSecure) {
+        this.cookieSecure = cookieSecure;
     }
 }

@@ -2,11 +2,7 @@ package com.example.workmanagement.domain.review.service;
 
 import com.example.workmanagement.domain.review.error.ReviewErrorCode;
 import com.example.workmanagement.domain.review.exception.ReviewDomainException;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.stereotype.Component;
 
-@Component
-@ConditionalOnMissingBean(StoragePresignService.class)
 public class DisabledStoragePresignService implements StoragePresignService {
 
     @Override
