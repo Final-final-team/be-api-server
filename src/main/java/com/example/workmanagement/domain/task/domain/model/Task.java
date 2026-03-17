@@ -161,6 +161,23 @@ public class Task {
         this.status = TaskStatus.PENDING;
     }
 
+    // Review 흐름의 상태 전이만 담당한다.
+    // 누가 이 전이를 호출할 수 있는지는 application service 에서 통제한다.
+    public void markInReview() {
+        if (status != TaskStatus.IN_PROGRESS) {
+            throw new TaskDomainException(TaskErrorCode.TASK_STATUS_TRANSITION_NOT_ALLOWED);
+        }
+        this.status = TaskStatus.IN_REVIEW;
+    }
+
+    // Review 흐름에서 반려/취소 시 다시 진행 상태로 되돌린다.
+    public void markInProgress() {
+        if (status != TaskStatus.IN_REVIEW) {
+            throw new TaskDomainException(TaskErrorCode.TASK_STATUS_TRANSITION_NOT_ALLOWED);
+        }
+        this.status = TaskStatus.IN_PROGRESS;
+    }
+
     public void forceComplete() {
         if (status != TaskStatus.IN_REVIEW) {
             throw new TaskDomainException(TaskErrorCode.TASK_STATUS_TRANSITION_NOT_ALLOWED);

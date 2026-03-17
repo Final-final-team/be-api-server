@@ -2,7 +2,7 @@ package com.example.workmanagement.domain.review.authorization;
 
 import com.example.workmanagement.domain.review.entity.Review;
 import com.example.workmanagement.domain.review.entity.ReviewComment;
-import com.example.workmanagement.domain.review.entity.MockTask;
+import com.example.workmanagement.domain.task.domain.model.Task;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -16,7 +16,7 @@ public class TemporaryReviewAuthorizationService implements ReviewAuthorizationP
      * 임시 구현에서는 permission 헤더 또는 관리자 예외 권한으로 상신 가능 여부를 판정한다.
      */
     @Override
-    public boolean canSubmit(MockTask task, ActorContext actor) {
+    public boolean canSubmit(Task task, ActorContext actor) {
         return hasPermission(actor, ReviewPermissions.REVIEW_SUBMIT);
     }
 
