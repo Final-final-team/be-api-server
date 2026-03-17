@@ -42,11 +42,6 @@ import java.util.regex.Pattern;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class SocialAccount {
 
-    private static final Pattern EMAIL_PATTERN = Pattern.compile(
-            "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"
-    );
-    private static final int MAX_SUB_LENGTH = 255;
-
     // ----- fields
 
     @Id
@@ -162,7 +157,7 @@ public class SocialAccount {
         if (sub == null || sub.isBlank()) {
             throw new UserDomainException(UserErrorCode.USER_INVALID_ARGUMENT, "소셜 계정 sub는 비어 있을 수 없습니다.");
         }
-        if (sub.length() > MAX_SUB_LENGTH) {
+        if (sub.length() > UserAccountConstants.MAX_SUB_LENGTH) {
             throw new UserDomainException(UserErrorCode.USER_INVALID_ARGUMENT, "소셜 계정 sub 길이가 허용 범위를 초과했습니다.");
         }
     }
@@ -177,7 +172,7 @@ public class SocialAccount {
         if (email.length() > UserAccountConstants.MAX_EMAIL_LENGTH) {
             throw new UserDomainException(UserErrorCode.USER_INVALID_ARGUMENT, "소셜 계정 이메일 길이가 허용 범위를 초과했습니다.");
         }
-        if (!EMAIL_PATTERN.matcher(email).matches()) {
+        if (!UserAccountConstants.EMAIL_PATTERN.matcher(email).matches()) {
             throw new UserDomainException(UserErrorCode.USER_INVALID_ARGUMENT, "소셜 계정 이메일 형식이 올바르지 않습니다.");
         }
     }
