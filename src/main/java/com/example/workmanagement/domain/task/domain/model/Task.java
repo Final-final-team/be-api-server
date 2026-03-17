@@ -107,6 +107,35 @@ public class Task {
         return new Task(projectId, authorId, title, description, startDate, dueDate, priority);
     }
 
+    // ----- business methods
+
+    public void updateTitle(String title) {
+        TaskValidators.ensureUpdatableStatus(status);
+        this.title = TaskValidators.normalizeTitle(title);
+    }
+
+    public void updateDescription(String description) {
+        TaskValidators.ensureUpdatableStatus(status);
+        this.description = TaskValidators.normalizeDescription(description);
+    }
+
+    public void updateStartDate(LocalDate startDate) {
+        TaskValidators.ensureUpdatableStatus(status);
+        TaskValidators.validateDateOrder(startDate, dueDate);
+        this.startDate = startDate;
+    }
+
+    public void updateDueDate(LocalDate dueDate) {
+        TaskValidators.ensureUpdatableStatus(status);
+        TaskValidators.validateDateOrder(startDate, dueDate);
+        this.dueDate = dueDate;
+    }
+
+    public void updatePriority(TaskPriority priority) {
+        TaskValidators.ensureUpdatableStatus(status);
+        this.priority = priority;
+    }
+
     private static Long validatePositiveId(Long id, String fieldName) {
         if (id == null || id <= 0) {
             throw new TaskDomainException(TaskErrorCode.TASK_INVALID_ARGUMENT, fieldName + " must be positive");
