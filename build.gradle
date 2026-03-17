@@ -18,6 +18,7 @@ repositories {
 }
 
 dependencies {
+    implementation platform('software.amazon.awssdk:bom:2.33.10')
 
     // web
     implementation 'org.springframework.boot:spring-boot-starter-web'
@@ -36,6 +37,7 @@ dependencies {
 
     // DB
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'software.amazon.awssdk:s3'
     runtimeOnly 'org.postgresql:postgresql'
     testImplementation 'org.springframework.security:spring-security-test'
 
