@@ -69,7 +69,7 @@ class TaskQueryControllerTest {
 
         when(taskQueryService.findTask(10L, 100L, 101L)).thenReturn(detailResult);
 
-        mockMvc.perform(get("/api/v1/projects/{projectId}/tasks/{taskId}", 10L, 100L))
+        mockMvc.perform(get("/api/projects/{projectId}/tasks/{taskId}", 10L, 100L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.taskId").value(100))
                 .andExpect(jsonPath("$.data.projectId").value(10))
@@ -93,7 +93,7 @@ class TaskQueryControllerTest {
 
         when(taskQueryService.findTasks(eq(10L), eq(101L), isNull(), any(Pageable.class))).thenReturn(pageResult);
 
-        mockMvc.perform(get("/api/v1/projects/{projectId}/tasks", 10L))
+        mockMvc.perform(get("/api/projects/{projectId}/tasks", 10L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.page").value(0))
                 .andExpect(jsonPath("$.data.size").value(20))
@@ -122,7 +122,7 @@ class TaskQueryControllerTest {
 
         when(taskQueryService.findTasks(eq(10L), eq(101L), eq(statuses), any(Pageable.class))).thenReturn(pageResult);
 
-        mockMvc.perform(get("/api/v1/projects/{projectId}/tasks", 10L)
+        mockMvc.perform(get("/api/projects/{projectId}/tasks", 10L)
                         .param("statuses", "PENDING", "IN_PROGRESS")
                         .param("page", "1")
                         .param("size", "30")
@@ -142,7 +142,7 @@ class TaskQueryControllerTest {
     void getTask_whenUnauthenticated_shouldReturnUnauthorized() throws Exception {
         SecurityContextHolder.clearContext();
 
-        mockMvc.perform(get("/api/v1/projects/{projectId}/tasks/{taskId}", 10L, 100L))
+        mockMvc.perform(get("/api/projects/{projectId}/tasks/{taskId}", 10L, 100L))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.errorInfo.code").value("USER_UNAUTHENTICATED"));
 

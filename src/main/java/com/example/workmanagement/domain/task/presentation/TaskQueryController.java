@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/projects/{projectId}/tasks")
+@RequestMapping("/api/projects/{projectId}/tasks")
 @Tag(name = "업무", description = "업무 조회 API")
 public class TaskQueryController {
 
