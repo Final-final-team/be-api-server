@@ -1,14 +1,15 @@
-package com.example.workmanagement.global.config;
+package com.example.workmanagement.global.security.config;
 
-import java.util.List;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+/**
+ * MVC 레벨 CORS 정책.
+ *
+ * 시큐리티와 중복 설정을 피하기 위해 오리진 목록은 CorsProperties에서만 관리한다.
+ */
 @Configuration
-@EnableConfigurationProperties(CorsConfig.CorsProperties.class)
 public class CorsConfig implements WebMvcConfigurer {
 
     private final CorsProperties corsProperties;
@@ -19,19 +20,13 @@ public class CorsConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
+        // 인증 쿠키를 주고받아야 하므로 allowCredentials(true)를 유지한다.
         registry.addMapping("/api/**")
-                .allowedOrigins(corsProperties.allowedOrigins().toArray(String[]::new))
+                .allowedOriginPatterns(corsProperties.allowedOrigins().toArray(String[]::new))
                 .allowedMethods("GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .exposedHeaders("If-Match")
                 .allowCredentials(true)
                 .maxAge(3600);
-    }
-
-    @ConfigurationProperties(prefix = "app.cors")
-    public record CorsProperties(List<String> allowedOrigins) {
-        public CorsProperties {
-            allowedOrigins = allowedOrigins == null ? List.of() : List.copyOf(allowedOrigins);
-        }
     }
 }

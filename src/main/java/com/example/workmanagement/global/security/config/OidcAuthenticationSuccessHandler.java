@@ -1,6 +1,5 @@
-package com.example.workmanagement.global.security;
+package com.example.workmanagement.global.security.config;
 
-import com.example.workmanagement.domain.user.domain.model.SocialAccount;
 import com.example.workmanagement.domain.user.domain.model.User;
 import com.example.workmanagement.domain.user.domain.model.enums.AuthProvider;
 import com.example.workmanagement.domain.user.service.issuance.AccessTokenService;
@@ -11,7 +10,6 @@ import com.example.workmanagement.global.security.jwt.JwtProperties;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
 import org.springframework.data.util.Pair;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
@@ -23,17 +21,43 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 
+/**
+ * 구글 OIDC 로그인 성공 직후 후속 처리를 담당한다.
+ *
+ * 핵심 역할은 다음과 같다.
+ * 1) 소셜 계정/회원 등록(또는 기존 회원 조회)
+ * 2) access/refresh 토큰 발급
+ * 3) 인증 쿠키 설정
+ * 4) OIDC 교환용 세션 정리 후 프론트 콜백으로 리다이렉트
+ */
 @Component
-@RequiredArgsConstructor
 public class OidcAuthenticationSuccessHandler implements AuthenticationSuccessHandler {
+
+    private static final boolean COOKIE_SECURE = true;
 
     private final SocialLoginService socialLoginService;
     private final AccessTokenService accessTokenService;
     private final AuthCookieService authCookieService;
     private final JwtProperties jwtProperties;
     private final RefreshTokenService refreshTokenService;
+    // 로그인 성공 후 어디로 보낼지 외부 설정으로 받는다.
+    private final AuthProperties authProperties;
 
-    private final String LOGIN_SUCCESS_REDIRECTION_URL = "http://localhost:8080/login/success";
+    public OidcAuthenticationSuccessHandler(
+            SocialLoginService socialLoginService,
+            AccessTokenService accessTokenService,
+            AuthCookieService authCookieService,
+            JwtProperties jwtProperties,
+            RefreshTokenService refreshTokenService,
+            AuthProperties authProperties
+    ) {
+        this.socialLoginService = socialLoginService;
+        this.accessTokenService = accessTokenService;
+        this.authCookieService = authCookieService;
+        this.jwtProperties = jwtProperties;
+        this.refreshTokenService = refreshTokenService;
+        this.authProperties = authProperties;
+    }
 
     @Override
     public void onAuthenticationSuccess(
@@ -44,18 +68,10 @@ public class OidcAuthenticationSuccessHandler implements AuthenticationSuccessHa
 
         OidcUser oidcUser = (OidcUser) authentication.getPrincipal();
 
-        System.out.println("oidcUser.getIdToken() = " + oidcUser.getIdToken());
-        System.out.println("oidcUser.getClaims() = " + oidcUser.getClaims());
-        System.out.println("oidcUser.getSubject() = " + oidcUser.getSubject());
-        System.out.println("oidcUser.getNonce() = " + oidcUser.getNonce());
-        System.out.println("oidcUser.getEmail() = " + oidcUser.getEmail());
-        System.out.println("oidcUser.getProfile() = " + oidcUser.getProfile());
-
         // 1. User & SocialAccount 등록 및 연동
         AuthProvider provider = resolveAuthProvider(authentication);
-        Pair<User, SocialAccount> userAndSocialAccount = socialLoginService.loginOrRegister(provider, oidcUser);
+        Pair<User, ?> userAndSocialAccount = socialLoginService.loginOrRegister(provider, oidcUser);
         User user = userAndSocialAccount.getFirst();
-        SocialAccount socialAccount = userAndSocialAccount.getSecond();
 
         // 2. 액세스 토큰(JWT) 생성
         String accessToken = accessTokenService.create(user);
@@ -64,23 +80,20 @@ public class OidcAuthenticationSuccessHandler implements AuthenticationSuccessHa
         RefreshTokenService.IssuedRefreshToken refreshToken = refreshTokenService.create(user);
 
         // 4. 액세스 토큰 및 리프레시 토큰을 쿠키에 설정
-        boolean isSslEnabled = false;
         HttpHeaders headers = new HttpHeaders();
 
         // headers 에 액세스 토큰을 담은 Set-Cookie 헤더(들) 추가
         authCookieService.addAccessTokenCookie(
                 headers,
                 accessToken,
-                jwtProperties.accessTokenTtl(),
-                isSslEnabled
+                jwtProperties.accessTokenTtl()
         );
 
         // headers 에 리프레시 토큰을 담은 Set-Cookie 헤더(들) 추가
         authCookieService.addRefreshTokenCookie(
                 headers,
                 refreshToken.rawToken(),
-                jwtProperties.refreshTokenTtl(),
-                isSslEnabled
+                jwtProperties.refreshTokenTtl()
         );
 
         // Set-Cookie 헤더들을 응답 객체에 설정
@@ -88,7 +101,8 @@ public class OidcAuthenticationSuccessHandler implements AuthenticationSuccessHa
                 values.forEach(value -> response.addHeader(name, value))
         );
 
-        // 6. OIDC용 세션 invalidate 및 JSESSIONID 쿠키 제거
+        // 5. OIDC용 세션 invalidate 및 JSESSIONID 쿠키 제거
+        // 브라우저에 불필요한 세션 흔적이 남지 않도록 즉시 정리한다.
         if (request.getSession(false) != null) {
             request.getSession(false).invalidate();
         }
@@ -96,13 +110,13 @@ public class OidcAuthenticationSuccessHandler implements AuthenticationSuccessHa
                 .path("/")
                 .maxAge(0)
                 .httpOnly(true)
-                .secure(request.isSecure())
-                .sameSite("Lax")
+                .secure(COOKIE_SECURE)
+                .sameSite("None")
                 .build();
         response.addHeader(HttpHeaders.SET_COOKIE, deleteSessionCookie.toString());
 
-        // 7. 프론트 페이지로 redirect
-        response.sendRedirect(LOGIN_SUCCESS_REDIRECTION_URL);
+        // 6. 프론트 콜백으로 이동
+        response.sendRedirect(authProperties.loginSuccessRedirectUrl());
     }
 
     // ----- helpers
@@ -112,7 +126,6 @@ public class OidcAuthenticationSuccessHandler implements AuthenticationSuccessHa
             return AuthProvider.of(o.getAuthorizedClientRegistrationId());
         }
 
-        // To Do: throw new AuthException(...);
-        return null;
+        throw new IllegalStateException("지원하지 않는 인증 타입입니다: " + authentication.getClass().getName());
     }
 }

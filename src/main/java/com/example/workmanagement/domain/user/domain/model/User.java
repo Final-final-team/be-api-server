@@ -1,6 +1,8 @@
 package com.example.workmanagement.domain.user.domain.model;
 
 import com.example.workmanagement.domain.user.domain.model.consts.UserAccountConstants;
+import com.example.workmanagement.domain.user.exception.UserDomainException;
+import com.example.workmanagement.domain.user.exception.UserErrorCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -15,7 +17,14 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
 import java.time.Instant;
+import java.util.regex.Pattern;
 
+/**
+ * 회원 애그리거트 루트.
+ *
+ * MVP에서는 계정 상태(휴면/정지)를 두지 않고,
+ * 이메일/닉네임/생성시각의 기본 불변식만 엄격하게 관리한다.
+ */
 @Entity
 @Table(
         // postgres 에서는 user 라는 이름을 사용하면 sql 에러가 발생함
@@ -72,6 +81,7 @@ public class User {
             String email,
             String nickname
     ) {
+        // 신규 생성 시점은 서버 시간으로 고정
         return User.builder()
                 .email(email)
                 .nickname(nickname)
@@ -85,8 +95,10 @@ public class User {
             String nickname,
             Instant createdAt
     ) {
-
-        // To Do: id == null -> throws Exception
+        // 테스트/복원 용도로 id를 포함한 재구성 경로를 제공
+        if (id == null) {
+            throw new UserDomainException(UserErrorCode.USER_INVALID_ARGUMENT, "회원 재구성 시 식별자(id)는 필수입니다.");
+        }
 
         return User.builder()
                 .id(id)
@@ -99,30 +111,51 @@ public class User {
     // ----- validators
 
     private static void validateId(Long id) {
-        // null 허용
-        // To Do: 유효하지 않으면 예외 발생
+        if (id != null && id <= 0) {
+            throw new UserDomainException(UserErrorCode.USER_INVALID_ARGUMENT, "회원 식별자(id)는 양수여야 합니다.");
+        }
     }
 
     private static void validateEmail(String email) {
-        // To Do: 유효하지 않으면 예외 발생
+        if (email == null || email.isBlank()) {
+            throw new UserDomainException(UserErrorCode.USER_INVALID_ARGUMENT, "회원 이메일은 비어 있을 수 없습니다.");
+        }
+        if (email.length() > UserAccountConstants.MAX_EMAIL_LENGTH) {
+            throw new UserDomainException(UserErrorCode.USER_INVALID_ARGUMENT, "회원 이메일 길이가 허용 범위를 초과했습니다.");
+        }
+        if (!UserAccountConstants.EMAIL_PATTERN.matcher(email).matches()) {
+            throw new UserDomainException(UserErrorCode.USER_INVALID_ARGUMENT, "회원 이메일 형식이 올바르지 않습니다.");
+        }
     }
 
     private static void validateNickname(String nickname) {
-        // To Do: 유효하지 않으면 예외 발생
+        if (nickname == null || nickname.isBlank()) {
+            throw new UserDomainException(UserErrorCode.USER_INVALID_ARGUMENT, "회원 닉네임은 비어 있을 수 없습니다.");
+        }
+        if (nickname.length() < UserAccountConstants.MIN_NICKNAME_LENGTH) {
+            throw new UserDomainException(UserErrorCode.USER_INVALID_ARGUMENT, "회원 닉네임은 최소 2자 이상이어야 합니다.");
+        }
+        if (nickname.length() > UserAccountConstants.MAX_NICKNAME_LENGTH) {
+            throw new UserDomainException(UserErrorCode.USER_INVALID_ARGUMENT, "회원 닉네임 길이가 허용 범위를 초과했습니다.");
+        }
     }
 
     private static void validateCreatedAt(Instant createdAt) {
-        // To Do: 유효하지 않으면 예외 발생
+        if (createdAt == null) {
+            throw new UserDomainException(UserErrorCode.USER_INVALID_ARGUMENT, "회원 생성 시각은 필수입니다.");
+        }
     }
 
     // ----- domain logics
 
     public void updateEmail(String email) {
+        // 갱신 시에도 생성 시점과 동일한 검증 규칙 적용
         validateEmail(email);
         this.email = email;
     }
 
     public void updateNickname(String nickname) {
+        // 닉네임 정책(길이/공백) 유지
         validateNickname(nickname);
         this.nickname = nickname;
     }
