@@ -136,6 +136,16 @@ public class Task {
         this.priority = priority;
     }
 
+    public void ensureAssignableStatus() {
+        TaskValidators.ensureAssignableStatus(status);
+    }
+
+    public void revertToPendingIfInProgress() {
+        if (status == TaskStatus.IN_PROGRESS) {
+            this.status = TaskStatus.PENDING;
+        }
+    }
+
     private static Long validatePositiveId(Long id, String fieldName) {
         if (id == null || id <= 0) {
             throw new TaskDomainException(TaskErrorCode.TASK_INVALID_ARGUMENT, fieldName + " must be positive");

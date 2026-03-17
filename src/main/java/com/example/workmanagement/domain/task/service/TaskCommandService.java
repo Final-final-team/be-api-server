@@ -2,9 +2,11 @@ package com.example.workmanagement.domain.task.service;
 
 import com.example.workmanagement.domain.project.entity.ProjectMemberStatus;
 import com.example.workmanagement.domain.project.repository.ProjectMemberRepository;
+import com.example.workmanagement.domain.task.domain.model.TaskAssignee;
 import com.example.workmanagement.domain.task.domain.model.Task;
 import com.example.workmanagement.domain.task.error.TaskErrorCode;
 import com.example.workmanagement.domain.task.exception.TaskDomainException;
+import com.example.workmanagement.domain.task.repository.TaskAssigneeRepository;
 import com.example.workmanagement.domain.task.repository.TaskRepository;
 import com.example.workmanagement.domain.task.service.command.TaskAssignCommand;
 import com.example.workmanagement.domain.task.service.command.TaskAssignMeCommand;
@@ -24,6 +26,7 @@ import com.example.workmanagement.global.authorization.PermissionChecker;
 import com.example.workmanagement.global.authorization.permission.TaskPermission;
 import java.util.Objects;
 import java.util.function.Consumer;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,15 +35,18 @@ import org.springframework.transaction.annotation.Transactional;
 public class TaskCommandService {
 
     private final TaskRepository taskRepository;
+    private final TaskAssigneeRepository taskAssigneeRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final PermissionChecker permissionChecker;
 
     public TaskCommandService(
             TaskRepository taskRepository,
+            TaskAssigneeRepository taskAssigneeRepository,
             ProjectMemberRepository projectMemberRepository,
             PermissionChecker permissionChecker
     ) {
         this.taskRepository = taskRepository;
+        this.taskAssigneeRepository = taskAssigneeRepository;
         this.projectMemberRepository = projectMemberRepository;
         this.permissionChecker = permissionChecker;
     }
@@ -119,19 +125,23 @@ public class TaskCommandService {
     // ----- 업무 할당 및 담당
 
     public TaskDetailResult assignTask(TaskAssignCommand command) {
-        throw notImplemented("assignTask");
+        requireCommand(command, "assignTask");
+        return assignTaskInternal(command.projectId(), command.taskId(), command.actorId(), command.userId());
     }
 
     public TaskDetailResult assignMe(TaskAssignMeCommand command) {
-        throw notImplemented("assignMe");
+        requireCommand(command, "assignMe");
+        return assignTaskInternal(command.projectId(), command.taskId(), command.actorId(), command.actorId());
     }
 
     public TaskDetailResult unassignTask(TaskUnassignCommand command) {
-        throw notImplemented("unassignTask");
+        requireCommand(command, "unassignTask");
+        return unassignTaskInternal(command.projectId(), command.taskId(), command.actorId(), command.userId());
     }
 
     public TaskDetailResult unassignMe(TaskUnassignMeCommand command) {
-        throw notImplemented("unassignMe");
+        requireCommand(command, "unassignMe");
+        return unassignTaskInternal(command.projectId(), command.taskId(), command.actorId(), command.actorId());
     }
 
     // ----- 업무 상태 변경
@@ -161,6 +171,57 @@ public class TaskCommandService {
         ensureUpdatePermission(task, actorId);
 
         updater.accept(task);
+
+        return loadTaskDetail(task.id());
+    }
+
+    private TaskDetailResult assignTaskInternal(Long projectId, Long taskId, Long actorId, Long targetUserId) {
+        validatePositiveId(projectId, "projectId");
+        validatePositiveId(taskId, "taskId");
+        validatePositiveId(actorId, "actorId");
+        validatePositiveId(targetUserId, "targetUserId");
+
+        ensureProjectMembership(projectId, actorId);
+        ensureAssignPermission(projectId, actorId);
+        ensureProjectMembership(projectId, targetUserId);
+
+        Task task = loadTaskInProject(projectId, taskId);
+        task.ensureAssignableStatus();
+
+        if (taskAssigneeRepository.existsByTaskIdAndUserId(task.id(), targetUserId)) {
+            throw new TaskDomainException(TaskErrorCode.TASK_ALREADY_ASSIGNED);
+        }
+
+        try {
+            taskAssigneeRepository.save(TaskAssignee.assign(task.id(), targetUserId, actorId));
+        } catch (DataIntegrityViolationException exception) {
+            throw new TaskDomainException(TaskErrorCode.TASK_ALREADY_ASSIGNED);
+        }
+
+        return loadTaskDetail(task.id());
+    }
+
+    private TaskDetailResult unassignTaskInternal(Long projectId, Long taskId, Long actorId, Long targetUserId) {
+        validatePositiveId(projectId, "projectId");
+        validatePositiveId(taskId, "taskId");
+        validatePositiveId(actorId, "actorId");
+        validatePositiveId(targetUserId, "targetUserId");
+
+        ensureProjectMembership(projectId, actorId);
+        ensureAssignPermission(projectId, actorId);
+
+        Task task = loadTaskInProject(projectId, taskId);
+        task.ensureAssignableStatus();
+
+        TaskAssignee taskAssignee = taskAssigneeRepository.findByTaskIdAndUserId(task.id(), targetUserId)
+                .orElseThrow(() -> new TaskDomainException(TaskErrorCode.TASK_ASSIGNEE_NOT_ASSIGNED));
+
+        taskAssigneeRepository.delete(taskAssignee);
+
+        long remainingAssigneeCount = taskAssigneeRepository.countByTaskId(task.id());
+        if (remainingAssigneeCount == 0L) {
+            task.revertToPendingIfInProgress();
+        }
 
         return loadTaskDetail(task.id());
     }
@@ -197,6 +258,12 @@ public class TaskCommandService {
     private void ensureCreatePermission(Long projectId, Long actorId) {
         if (!permissionChecker.hasTaskPermission(projectId, actorId, TaskPermission.TASK_CREATE)) {
             throw new TaskDomainException(TaskErrorCode.TASK_CREATE_FORBIDDEN);
+        }
+    }
+
+    private void ensureAssignPermission(Long projectId, Long actorId) {
+        if (!permissionChecker.hasTaskPermission(projectId, actorId, TaskPermission.TASK_ASSIGN)) {
+            throw new TaskDomainException(TaskErrorCode.TASK_ASSIGN_FORBIDDEN);
         }
     }
 

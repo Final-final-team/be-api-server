@@ -69,4 +69,14 @@ public final class TaskValidators {
             throw new TaskDomainException(TaskErrorCode.TASK_UPDATE_NOT_ALLOWED);
         }
     }
+
+    public static void ensureAssignableStatus(TaskStatus currentStatus) {
+        if (currentStatus == null) {
+            throw new TaskDomainException(TaskErrorCode.TASK_STATUS_INVALID);
+        }
+
+        if (currentStatus != TaskStatus.PENDING && currentStatus != TaskStatus.IN_PROGRESS) {
+            throw new TaskDomainException(TaskErrorCode.TASK_ASSIGNMENT_NOT_ALLOWED);
+        }
+    }
 }
