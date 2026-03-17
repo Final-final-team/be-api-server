@@ -6,7 +6,14 @@ import java.time.Instant;
 import java.util.Objects;
 
 @Entity
-@Table(name = "project_member_roles")
+@Table(name = "project_member_roles",
+       indexes = {
+           @Index(name = "idx_pmr_project_member_id", columnList = "project_member_id"),
+           @Index(name = "idx_pmr_role_id", columnList = "role_id"),
+           @Index(name = "idx_pmr_member_active", columnList = "project_member_id, revoked_at"),
+           @Index(name = "idx_pmr_role_active", columnList = "role_id, revoked_at")
+       })
+// policy: PJM-P-05 (멤버별 역할 조회 성능)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ProjectMemberRole {
