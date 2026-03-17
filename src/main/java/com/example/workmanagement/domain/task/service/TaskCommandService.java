@@ -147,15 +147,52 @@ public class TaskCommandService {
     // ----- 업무 상태 변경
 
     public TaskDetailResult startTask(TaskStartCommand command) {
-        throw notImplemented("startTask");
+        requireCommand(command, "startTask");
+
+        validatePositiveId(command.projectId(), "projectId");
+        validatePositiveId(command.taskId(), "taskId");
+        validatePositiveId(command.actorId(), "actorId");
+
+        ensureProjectMembership(command.projectId(), command.actorId());
+
+        Task task = loadTaskInProject(command.projectId(), command.taskId());
+        ensureTaskHasAssignee(task.id());
+        ensureStartPermission(task.id(), command.actorId());
+
+        task.start();
+        return loadTaskDetail(task.id());
     }
 
     public TaskDetailResult cancelStartTask(TaskCancelStartCommand command) {
-        throw notImplemented("cancelStartTask");
+        requireCommand(command, "cancelStartTask");
+
+        validatePositiveId(command.projectId(), "projectId");
+        validatePositiveId(command.taskId(), "taskId");
+        validatePositiveId(command.actorId(), "actorId");
+
+        ensureProjectMembership(command.projectId(), command.actorId());
+
+        Task task = loadTaskInProject(command.projectId(), command.taskId());
+        ensureStartPermission(task.id(), command.actorId());
+
+        task.cancelStart();
+        return loadTaskDetail(task.id());
     }
 
     public TaskDetailResult forceCompleteTask(TaskForceCompleteCommand command) {
-        throw notImplemented("forceCompleteTask");
+        requireCommand(command, "forceCompleteTask");
+
+        validatePositiveId(command.projectId(), "projectId");
+        validatePositiveId(command.taskId(), "taskId");
+        validatePositiveId(command.actorId(), "actorId");
+
+        ensureProjectMembership(command.projectId(), command.actorId());
+        ensureForceCompletePermission(command.projectId(), command.actorId());
+
+        Task task = loadTaskInProject(command.projectId(), command.taskId());
+        task.forceComplete();
+
+        return loadTaskDetail(task.id());
     }
 
     // ----- helpers
@@ -267,6 +304,24 @@ public class TaskCommandService {
         }
     }
 
+    private void ensureStartPermission(Long taskId, Long actorId) {
+        if (!taskAssigneeRepository.existsByTaskIdAndUserId(taskId, actorId)) {
+            throw new TaskDomainException(TaskErrorCode.TASK_START_FORBIDDEN);
+        }
+    }
+
+    private void ensureTaskHasAssignee(Long taskId) {
+        if (taskAssigneeRepository.countByTaskId(taskId) <= 0L) {
+            throw new TaskDomainException(TaskErrorCode.TASK_STATUS_TRANSITION_NOT_ALLOWED);
+        }
+    }
+
+    private void ensureForceCompletePermission(Long projectId, Long actorId) {
+        if (!permissionChecker.hasTaskPermission(projectId, actorId, TaskPermission.TASK_FORCE_COMPLETE)) {
+            throw new TaskDomainException(TaskErrorCode.TASK_FORCE_COMPLETE_FORBIDDEN);
+        }
+    }
+
     private void ensureUpdatePermission(Task task, Long actorId) {
         if (Objects.equals(task.authorId(), actorId)) {
             return;
@@ -294,10 +349,4 @@ public class TaskCommandService {
         }
     }
 
-    private static TaskDomainException notImplemented(String operation) {
-        return new TaskDomainException(
-                TaskErrorCode.TASK_INTERNAL_SERVER_ERROR,
-                operation + " command is not implemented yet"
-        );
-    }
 }

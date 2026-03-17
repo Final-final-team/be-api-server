@@ -13,7 +13,10 @@ import com.example.workmanagement.domain.task.repository.TaskAssigneeRepository;
 import com.example.workmanagement.domain.task.repository.TaskRepository;
 import com.example.workmanagement.domain.task.service.command.TaskAssignCommand;
 import com.example.workmanagement.domain.task.service.command.TaskAssignMeCommand;
+import com.example.workmanagement.domain.task.service.command.TaskCancelStartCommand;
 import com.example.workmanagement.domain.task.service.command.TaskCreateCommand;
+import com.example.workmanagement.domain.task.service.command.TaskForceCompleteCommand;
+import com.example.workmanagement.domain.task.service.command.TaskStartCommand;
 import com.example.workmanagement.domain.task.service.command.TaskUnassignCommand;
 import com.example.workmanagement.domain.task.service.command.TaskUnassignMeCommand;
 import com.example.workmanagement.domain.task.service.command.TaskUpdateTitleCommand;
@@ -297,6 +300,219 @@ class TaskCommandServiceTest {
         assertSame(detail, result);
         assertEquals(TaskStatus.PENDING, getFieldValue(task, "status"));
         verify(taskAssigneeRepository).delete(taskAssignee);
+    }
+
+    @Test
+    void startTask_whenActorNotAssignee_shouldThrowForbidden() {
+        Task task = createTask(100L, 1L, 20L, "기존 제목", TaskStatus.PENDING);
+
+        when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
+                .thenReturn(Optional.of(Mockito.mock(ProjectMember.class)));
+        when(taskRepository.findById(100L)).thenReturn(Optional.of(task));
+        when(taskAssigneeRepository.countByTaskId(100L)).thenReturn(1L);
+        when(taskAssigneeRepository.existsByTaskIdAndUserId(100L, 10L)).thenReturn(false);
+
+        TaskDomainException exception = assertThrows(
+                TaskDomainException.class,
+                () -> taskCommandService.startTask(new TaskStartCommand(1L, 100L, 10L))
+        );
+
+        assertEquals(TaskErrorCode.TASK_START_FORBIDDEN, exception.errorCode());
+    }
+
+    @Test
+    void startTask_whenNoAssignee_shouldThrowTransitionNotAllowed() {
+        Task task = createTask(100L, 1L, 20L, "기존 제목", TaskStatus.PENDING);
+
+        when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
+                .thenReturn(Optional.of(Mockito.mock(ProjectMember.class)));
+        when(taskRepository.findById(100L)).thenReturn(Optional.of(task));
+        when(taskAssigneeRepository.countByTaskId(100L)).thenReturn(0L);
+
+        TaskDomainException exception = assertThrows(
+                TaskDomainException.class,
+                () -> taskCommandService.startTask(new TaskStartCommand(1L, 100L, 10L))
+        );
+
+        assertEquals(TaskErrorCode.TASK_STATUS_TRANSITION_NOT_ALLOWED, exception.errorCode());
+    }
+
+    @Test
+    void startTask_whenValid_shouldTransitionToInProgress() {
+        Task task = createTask(100L, 1L, 20L, "기존 제목", TaskStatus.PENDING);
+        TaskDetailResult detail = createDetail(100L, 1L, 20L, "기존 제목", TaskStatus.IN_PROGRESS);
+
+        when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
+                .thenReturn(Optional.of(Mockito.mock(ProjectMember.class)));
+        when(taskRepository.findById(100L)).thenReturn(Optional.of(task));
+        when(taskAssigneeRepository.countByTaskId(100L)).thenReturn(1L);
+        when(taskAssigneeRepository.existsByTaskIdAndUserId(100L, 10L)).thenReturn(true);
+        when(taskRepository.findDetailById(100L)).thenReturn(Optional.of(detail));
+
+        TaskDetailResult result = taskCommandService.startTask(new TaskStartCommand(1L, 100L, 10L));
+
+        assertSame(detail, result);
+        assertEquals(TaskStatus.IN_PROGRESS, getFieldValue(task, "status"));
+    }
+
+    @Test
+    void startTask_whenStatusNotPending_shouldThrowTransitionNotAllowed() {
+        Task task = createTask(100L, 1L, 20L, "기존 제목", TaskStatus.IN_PROGRESS);
+
+        when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
+                .thenReturn(Optional.of(Mockito.mock(ProjectMember.class)));
+        when(taskRepository.findById(100L)).thenReturn(Optional.of(task));
+        when(taskAssigneeRepository.countByTaskId(100L)).thenReturn(1L);
+        when(taskAssigneeRepository.existsByTaskIdAndUserId(100L, 10L)).thenReturn(true);
+
+        TaskDomainException exception = assertThrows(
+                TaskDomainException.class,
+                () -> taskCommandService.startTask(new TaskStartCommand(1L, 100L, 10L))
+        );
+
+        assertEquals(TaskErrorCode.TASK_STATUS_TRANSITION_NOT_ALLOWED, exception.errorCode());
+    }
+
+    @Test
+    void startTask_whenNotProjectMember_shouldThrowForbidden() {
+        when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
+                .thenReturn(Optional.empty());
+
+        TaskDomainException exception = assertThrows(
+                TaskDomainException.class,
+                () -> taskCommandService.startTask(new TaskStartCommand(1L, 100L, 10L))
+        );
+
+        assertEquals(TaskErrorCode.TASK_PROJECT_MEMBERSHIP_REQUIRED, exception.errorCode());
+        verify(taskRepository, never()).findById(any());
+    }
+
+    @Test
+    void cancelStartTask_whenNotInProgress_shouldThrowTransitionNotAllowed() {
+        Task task = createTask(100L, 1L, 20L, "기존 제목", TaskStatus.PENDING);
+
+        when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
+                .thenReturn(Optional.of(Mockito.mock(ProjectMember.class)));
+        when(taskRepository.findById(100L)).thenReturn(Optional.of(task));
+        when(taskAssigneeRepository.existsByTaskIdAndUserId(100L, 10L)).thenReturn(true);
+
+        TaskDomainException exception = assertThrows(
+                TaskDomainException.class,
+                () -> taskCommandService.cancelStartTask(new TaskCancelStartCommand(1L, 100L, 10L))
+        );
+
+        assertEquals(TaskErrorCode.TASK_STATUS_TRANSITION_NOT_ALLOWED, exception.errorCode());
+    }
+
+    @Test
+    void cancelStartTask_whenActorNotAssignee_shouldThrowForbidden() {
+        Task task = createTask(100L, 1L, 20L, "기존 제목", TaskStatus.IN_PROGRESS);
+
+        when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
+                .thenReturn(Optional.of(Mockito.mock(ProjectMember.class)));
+        when(taskRepository.findById(100L)).thenReturn(Optional.of(task));
+        when(taskAssigneeRepository.existsByTaskIdAndUserId(100L, 10L)).thenReturn(false);
+
+        TaskDomainException exception = assertThrows(
+                TaskDomainException.class,
+                () -> taskCommandService.cancelStartTask(new TaskCancelStartCommand(1L, 100L, 10L))
+        );
+
+        assertEquals(TaskErrorCode.TASK_START_FORBIDDEN, exception.errorCode());
+    }
+
+    @Test
+    void cancelStartTask_whenValid_shouldTransitionToPending() {
+        Task task = createTask(100L, 1L, 20L, "기존 제목", TaskStatus.IN_PROGRESS);
+        TaskDetailResult detail = createDetail(100L, 1L, 20L, "기존 제목", TaskStatus.PENDING);
+
+        when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
+                .thenReturn(Optional.of(Mockito.mock(ProjectMember.class)));
+        when(taskRepository.findById(100L)).thenReturn(Optional.of(task));
+        when(taskAssigneeRepository.existsByTaskIdAndUserId(100L, 10L)).thenReturn(true);
+        when(taskRepository.findDetailById(100L)).thenReturn(Optional.of(detail));
+
+        TaskDetailResult result = taskCommandService.cancelStartTask(new TaskCancelStartCommand(1L, 100L, 10L));
+
+        assertSame(detail, result);
+        assertEquals(TaskStatus.PENDING, getFieldValue(task, "status"));
+    }
+
+    @Test
+    void cancelStartTask_whenNotProjectMember_shouldThrowForbidden() {
+        when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
+                .thenReturn(Optional.empty());
+
+        TaskDomainException exception = assertThrows(
+                TaskDomainException.class,
+                () -> taskCommandService.cancelStartTask(new TaskCancelStartCommand(1L, 100L, 10L))
+        );
+
+        assertEquals(TaskErrorCode.TASK_PROJECT_MEMBERSHIP_REQUIRED, exception.errorCode());
+        verify(taskRepository, never()).findById(any());
+    }
+
+    @Test
+    void forceCompleteTask_whenNoPermission_shouldThrowForbidden() {
+        when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
+                .thenReturn(Optional.of(Mockito.mock(ProjectMember.class)));
+        when(permissionChecker.hasTaskPermission(1L, 10L, TaskPermission.TASK_FORCE_COMPLETE)).thenReturn(false);
+
+        TaskDomainException exception = assertThrows(
+                TaskDomainException.class,
+                () -> taskCommandService.forceCompleteTask(new TaskForceCompleteCommand(1L, 100L, 10L))
+        );
+
+        assertEquals(TaskErrorCode.TASK_FORCE_COMPLETE_FORBIDDEN, exception.errorCode());
+        verify(taskRepository, never()).findById(any());
+    }
+
+    @Test
+    void forceCompleteTask_whenValid_shouldTransitionToCompleted() {
+        Task task = createTask(100L, 1L, 20L, "기존 제목", TaskStatus.IN_REVIEW);
+        TaskDetailResult detail = createDetail(100L, 1L, 20L, "기존 제목", TaskStatus.COMPLETED);
+
+        when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
+                .thenReturn(Optional.of(Mockito.mock(ProjectMember.class)));
+        when(permissionChecker.hasTaskPermission(1L, 10L, TaskPermission.TASK_FORCE_COMPLETE)).thenReturn(true);
+        when(taskRepository.findById(100L)).thenReturn(Optional.of(task));
+        when(taskRepository.findDetailById(100L)).thenReturn(Optional.of(detail));
+
+        TaskDetailResult result = taskCommandService.forceCompleteTask(new TaskForceCompleteCommand(1L, 100L, 10L));
+
+        assertSame(detail, result);
+        assertEquals(TaskStatus.COMPLETED, getFieldValue(task, "status"));
+    }
+
+    @Test
+    void forceCompleteTask_whenStatusNotInReview_shouldThrowTransitionNotAllowed() {
+        Task task = createTask(100L, 1L, 20L, "기존 제목", TaskStatus.IN_PROGRESS);
+
+        when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
+                .thenReturn(Optional.of(Mockito.mock(ProjectMember.class)));
+        when(permissionChecker.hasTaskPermission(1L, 10L, TaskPermission.TASK_FORCE_COMPLETE)).thenReturn(true);
+        when(taskRepository.findById(100L)).thenReturn(Optional.of(task));
+
+        TaskDomainException exception = assertThrows(
+                TaskDomainException.class,
+                () -> taskCommandService.forceCompleteTask(new TaskForceCompleteCommand(1L, 100L, 10L))
+        );
+
+        assertEquals(TaskErrorCode.TASK_STATUS_TRANSITION_NOT_ALLOWED, exception.errorCode());
+    }
+
+    @Test
+    void forceCompleteTask_whenNotProjectMember_shouldThrowForbidden() {
+        when(projectMemberRepository.findByProjectIdAndUserIdAndStatus(1L, 10L, ProjectMemberStatus.ACTIVE))
+                .thenReturn(Optional.empty());
+
+        TaskDomainException exception = assertThrows(
+                TaskDomainException.class,
+                () -> taskCommandService.forceCompleteTask(new TaskForceCompleteCommand(1L, 100L, 10L))
+        );
+
+        assertEquals(TaskErrorCode.TASK_PROJECT_MEMBERSHIP_REQUIRED, exception.errorCode());
+        verify(taskRepository, never()).findById(any());
     }
 
     private static TaskCreateCommand createCommand(Long projectId, Long actorId, String title) {

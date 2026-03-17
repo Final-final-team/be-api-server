@@ -146,6 +146,27 @@ public class Task {
         }
     }
 
+    public void start() {
+        if (status != TaskStatus.PENDING) {
+            throw new TaskDomainException(TaskErrorCode.TASK_STATUS_TRANSITION_NOT_ALLOWED);
+        }
+        this.status = TaskStatus.IN_PROGRESS;
+    }
+
+    public void cancelStart() {
+        if (status != TaskStatus.IN_PROGRESS) {
+            throw new TaskDomainException(TaskErrorCode.TASK_STATUS_TRANSITION_NOT_ALLOWED);
+        }
+        this.status = TaskStatus.PENDING;
+    }
+
+    public void forceComplete() {
+        if (status != TaskStatus.IN_REVIEW) {
+            throw new TaskDomainException(TaskErrorCode.TASK_STATUS_TRANSITION_NOT_ALLOWED);
+        }
+        this.status = TaskStatus.COMPLETED;
+    }
+
     private static Long validatePositiveId(Long id, String fieldName) {
         if (id == null || id <= 0) {
             throw new TaskDomainException(TaskErrorCode.TASK_INVALID_ARGUMENT, fieldName + " must be positive");
