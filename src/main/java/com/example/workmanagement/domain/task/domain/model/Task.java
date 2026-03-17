@@ -3,12 +3,11 @@ package com.example.workmanagement.domain.task.domain.model;
 import com.example.workmanagement.domain.task.error.TaskErrorCode;
 import com.example.workmanagement.domain.task.exception.TaskDomainException;
 import com.example.workmanagement.domain.task.domain.validation.TaskValidators;
-import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Column;
-import jakarta.persistence.Convert;
-import jakarta.persistence.Converter;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -57,7 +56,7 @@ public class Task {
     @Column(name = "due_date")
     private LocalDate dueDate;
 
-    @Convert(converter = TaskStatusJpaConverter.class)
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 30)
     private TaskStatus status = TaskStatus.PENDING;
 
@@ -113,36 +112,5 @@ public class Task {
             throw new TaskDomainException(TaskErrorCode.TASK_INVALID_ARGUMENT, fieldName + " must be positive");
         }
         return id;
-    }
-}
-
-/**
- * 현재 검토(review) 도메인에서 사용 중인 MockTask 의 상태와의 불일치를 해소하기 위한 컨버터
- * 나중에 MockTask 삭제 시 이 컨버터도 삭제해야 함
- */
-@Converter(autoApply = false)
-class TaskStatusJpaConverter implements AttributeConverter<TaskStatus, String> {
-
-    @Override
-    public String convertToDatabaseColumn(TaskStatus attribute) {
-        if (attribute == null) {
-            return null;
-        }
-        return attribute == TaskStatus.PENDING ? "TODO" : attribute.name();
-    }
-
-    @Override
-    public TaskStatus convertToEntityAttribute(String dbData) {
-        if (dbData == null || dbData.isBlank()) {
-            return null;
-        }
-        if ("TODO".equals(dbData) || "PENDING".equals(dbData)) {
-            return TaskStatus.PENDING;
-        }
-        try {
-            return TaskStatus.valueOf(dbData);
-        } catch (IllegalArgumentException ex) {
-            throw new TaskDomainException(TaskErrorCode.TASK_STATUS_INVALID, "invalid task status value: " + dbData);
-        }
     }
 }
