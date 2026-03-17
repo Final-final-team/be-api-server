@@ -2,6 +2,8 @@ package com.example.workmanagement.domain.review.repository;
 
 import com.example.workmanagement.domain.review.entity.ReviewHistory;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ReviewHistoryRepository extends JpaRepository<ReviewHistory, Long> {
@@ -15,4 +17,6 @@ public interface ReviewHistoryRepository extends JpaRepository<ReviewHistory, Lo
      * 정책 코드: RVW-P-11-001, RVW-P-11-007, RVW-P-15-002
      */
     List<ReviewHistory> findAllByReview_IdOrderByOccurredAtDesc(Long reviewId);
+
+    Page<ReviewHistory> findAllByReview_Id(Long reviewId, Pageable pageable);
 }

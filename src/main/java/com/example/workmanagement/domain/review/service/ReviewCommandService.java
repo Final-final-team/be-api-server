@@ -31,9 +31,9 @@ import com.example.workmanagement.domain.review.service.command.UpdateReviewComm
 import com.example.workmanagement.domain.review.service.result.ReviewAttachmentPresignResult;
 import com.example.workmanagement.domain.review.service.result.ReviewDetailResult;
 import com.example.workmanagement.domain.review.error.ReviewErrorCode;
-import com.example.workmanagement.domain.review.entity.MockTask;
-import com.example.workmanagement.domain.review.entity.MockTaskStatus;
-import com.example.workmanagement.domain.task.repository.MockTaskRepository;
+import com.example.workmanagement.domain.task.domain.model.Task;
+import com.example.workmanagement.domain.task.domain.model.TaskStatus;
+import com.example.workmanagement.domain.task.repository.TaskRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
@@ -83,7 +83,7 @@ public class ReviewCommandService {
 
     // TODO 아키텍처: Review BC 가 Task BC repository 를 직접 참조하지 않도록 포트/파사드로 치환해야 한다.
     // 업무 상태 판정/변경과 작성자 판별은 Task BC 가 책임지고, Review BC 는 필요한 데이터만 전달받도록 정리한다.
-    private final MockTaskRepository taskRepository;
+    private final TaskRepository taskRepository;
     private final ReviewRepository reviewRepository;
     private final ReviewReferenceRepository reviewReferenceRepository;
     private final ReviewAttachmentRepository reviewAttachmentRepository;
@@ -98,7 +98,7 @@ public class ReviewCommandService {
 
     public ReviewCommandService(
             // TODO 아키텍처: Task BC 직접 참조 제거 예정. 업무 상태 판정/변경과 작성자 판별은 Task BC 가 맡고 Review BC 는 데이터만 받도록 수정.
-            MockTaskRepository taskRepository,
+            TaskRepository taskRepository,
             ReviewRepository reviewRepository,
             ReviewReferenceRepository reviewReferenceRepository,
             ReviewAttachmentRepository reviewAttachmentRepository,
@@ -130,9 +130,9 @@ public class ReviewCommandService {
      * 정책 코드: RVW-P-00-002, RVW-P-00-003, RVW-P-00-004, RVW-P-00-005, RVW-P-01-001, RVW-P-03-005
      */
     public ReviewDetailResult submitReview(Long taskId, SubmitReviewCommand command, ActorContext actor) {
-        MockTask task = loadTask(taskId);
+        Task task = loadTask(taskId);
 
-        if (task.getStatus() != MockTaskStatus.IN_PROGRESS) {
+        if (task.status() != TaskStatus.IN_PROGRESS) {
             throw new ReviewDomainException(ReviewErrorCode.REVIEW_SUBMIT_NOT_ALLOWED);
         }
 
@@ -220,10 +220,10 @@ public class ReviewCommandService {
                 ReviewErrorCode.REVIEW_APPROVAL_FORBIDDEN
         );
         validateLockVersion(review, lockVersion);
-        MockTask task = loadTask(review.getTaskId());
+        Task task = loadTask(review.getTaskId());
 
         review.approve(actor.actorId(), Instant.now());
-        task.markCompleted();
+        task.forceComplete();
         recordHistory(
                 review,
                 ReviewHistoryActionType.REVIEW_APPROVED,
@@ -257,7 +257,7 @@ public class ReviewCommandService {
                 ReviewErrorCode.REVIEW_REJECTION_FORBIDDEN
         );
         validateLockVersion(review, lockVersion);
-        MockTask task = loadTask(review.getTaskId());
+        Task task = loadTask(review.getTaskId());
 
         if (command.reason() == null || command.reason().isBlank()) {
             throw new ReviewDomainException(ReviewErrorCode.REJECTION_REASON_REQUIRED);
@@ -298,7 +298,7 @@ public class ReviewCommandService {
                 ReviewErrorCode.REVIEW_CANCEL_FORBIDDEN
         );
         validateLockVersion(review, lockVersion);
-        MockTask task = loadTask(review.getTaskId());
+        Task task = loadTask(review.getTaskId());
 
         review.cancel(actor.actorId(), Instant.now());
         task.markInProgress();
@@ -397,12 +397,8 @@ public class ReviewCommandService {
      * 첨부 업로드용 presigned URL 응답을 생성한다.
      * 정책 코드: RVW-P-07-001, RVW-P-07-002, RVW-P-07-003, RVW-P-07-004, RVW-P-07-005, RVW-P-07-006, RVW-P-07-007, RVW-P-07-008, RVW-P-07-009, RVW-P-07-012
      */
-    // TODO 정책 코드: RVW-P-07-009
-    // presigned URL 실제 스토리지 연동 구현이 아직 없다.
     // TODO 정책 코드: RVW-P-07-010
     // 첨부 바이러스 검사 등 보안 검사가 아직 없다.
-    // TODO 정책 코드: RVW-P-07-011
-    // REVIEW_VIEW 권한 기반의 첨부 다운로드 API/다운로드 presign 인가가 아직 없다.
     public ReviewAttachmentPresignResult createAttachmentPresignUrl(
             Long reviewId,
             Long lockVersion,
@@ -435,8 +431,6 @@ public class ReviewCommandService {
      * 업로드가 끝난 첨부를 검토에 연결한다.
      * 정책 코드: RVW-P-07-001, RVW-P-07-002, RVW-P-07-003, RVW-P-07-004, RVW-P-07-005, RVW-P-07-006, RVW-P-07-007, RVW-P-07-008, RVW-P-07-013
      */
-    // TODO 정책 코드: RVW-P-07-013
-    // 현재는 요청 payload 값만 재검증하고 실제 업로드된 객체의 확장자/MIME/크기를 스토리지 메타데이터 기준으로 다시 검증하지 않는다.
     public ReviewDetailResult confirmAttachment(
             Long reviewId,
             Long lockVersion,
@@ -452,6 +446,7 @@ public class ReviewCommandService {
         validateLockVersion(review, lockVersion);
         validateAttachmentRequest(command.originalName(), command.contentType(), command.sizeBytes());
         validateAttachmentCapacity(reviewId, command.sizeBytes());
+        validateStoredObject(command.objectKey(), command.contentType(), command.sizeBytes());
 
         ReviewAttachment attachment = reviewAttachmentRepository.save(new ReviewAttachment(
                 review,
@@ -508,6 +503,7 @@ public class ReviewCommandService {
                         "originalName", attachment.getOriginalName()
                 )
         );
+        storagePresignService.deleteObject(attachment.getObjectKey());
 
         return buildReviewDetail(review);
     }
@@ -701,7 +697,7 @@ public class ReviewCommandService {
      */
     // TODO 아키텍처: Task 존재 확인과 상태 조회는 Task BC 가 책임져야 한다.
     // Review BC 는 직접 repository 를 치지 말고 상위 계층 또는 포트를 통해 필요한 데이터만 전달받도록 변경한다.
-    private MockTask loadTask(Long taskId) {
+    private Task loadTask(Long taskId) {
         return taskRepository.findById(taskId)
                 .orElseThrow(() -> new ReviewDomainException(ReviewErrorCode.TASK_NOT_FOUND));
     }
@@ -764,8 +760,8 @@ public class ReviewCommandService {
      */
     // TODO 아키텍처: 업무 작성자 판별은 Task BC 의 책임이다.
     // Review BC 가 직접 task.authorId 를 비교하지 말고, Task BC 가 작성자 여부를 판별해 결과만 전달하도록 변경한다.
-    private boolean isTaskAuthor(MockTask task, ActorContext actor) {
-        return Objects.equals(task.getAuthorId(), actor.actorId());
+    private boolean isTaskAuthor(Task task, ActorContext actor) {
+        return task.isAuthor(actor.actorId());
     }
 
     /**
@@ -835,6 +831,11 @@ public class ReviewCommandService {
         }
 
         attachments.stream()
+                .peek(attachment -> validateStoredObject(
+                        attachment.objectKey(),
+                        attachment.contentType(),
+                        attachment.sizeBytes()
+                ))
                 .map(attachment -> new ReviewAttachment(
                         review,
                         attachment.objectKey(),
@@ -968,10 +969,30 @@ public class ReviewCommandService {
         if (contentType == null || contentType.isBlank()) {
             throw new ReviewDomainException(ReviewErrorCode.ATTACHMENT_CONTENT_TYPE_NOT_ALLOWED);
         }
-        String normalizedContentType = contentType.toLowerCase();
+        String normalizedContentType = normalizeContentType(contentType);
         if (!ALLOWED_ATTACHMENT_CONTENT_TYPES.contains(normalizedContentType)) {
             throw new ReviewDomainException(ReviewErrorCode.ATTACHMENT_CONTENT_TYPE_NOT_ALLOWED);
         }
+    }
+
+    private void validateStoredObject(String objectKey, String contentType, Long sizeBytes) {
+        StorageObjectMetadata metadata = storagePresignService.getObjectMetadata(objectKey);
+        if (!Objects.equals(metadata.sizeBytes(), sizeBytes)) {
+            throw new ReviewDomainException(ReviewErrorCode.ATTACHMENT_OBJECT_METADATA_MISMATCH);
+        }
+
+        if (!Objects.equals(normalizeContentType(metadata.contentType()), normalizeContentType(contentType))) {
+            throw new ReviewDomainException(ReviewErrorCode.ATTACHMENT_OBJECT_METADATA_MISMATCH);
+        }
+    }
+
+    private String normalizeContentType(String contentType) {
+        if (contentType == null) {
+            return null;
+        }
+        int separatorIndex = contentType.indexOf(';');
+        String normalized = separatorIndex >= 0 ? contentType.substring(0, separatorIndex) : contentType;
+        return normalized.trim().toLowerCase();
     }
 
     /**
@@ -1003,7 +1024,15 @@ public class ReviewCommandService {
             String reason,
             Map<String, Object> metadata
     ) {
-        String metadataJson = toMetadataJson(metadata);
+        Map<String, Object> standardizedMetadata = standardizeMetadata(
+                review,
+                actionType,
+                targetType,
+                targetId,
+                actorId,
+                metadata
+        );
+        String metadataJson = toMetadataJson(standardizedMetadata);
         ReviewHistory history = ReviewHistory.create(
                 review,
                 actionType,
@@ -1015,7 +1044,28 @@ public class ReviewCommandService {
                 Instant.now()
         );
         reviewHistoryRepository.save(history);
-        auditLogger.log(actionType, targetType, targetId, actorId, reason, metadata);
+        auditLogger.log(actionType, targetType, targetId, actorId, reason, standardizedMetadata);
+    }
+
+    private Map<String, Object> standardizeMetadata(
+            Review review,
+            ReviewHistoryActionType actionType,
+            ReviewHistoryTargetType targetType,
+            Long targetId,
+            Long actorId,
+            Map<String, Object> metadata
+    ) {
+        LinkedHashMap<String, Object> standardized = new LinkedHashMap<>();
+        standardized.put("reviewId", review.getId());
+        standardized.put("taskId", review.getTaskId());
+        standardized.put("actionType", actionType.name());
+        standardized.put("targetType", targetType.name());
+        standardized.put("targetId", targetId);
+        standardized.put("actorId", actorId);
+        if (metadata != null && !metadata.isEmpty()) {
+            standardized.putAll(metadata);
+        }
+        return standardized;
     }
 
     /**
