@@ -13,7 +13,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.CookieValue;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -45,12 +44,6 @@ public class AuthController {
         this.refreshTokenService = refreshTokenService;
     }
 
-    // To Do: 삭제할것
-    @GetMapping("/")
-    public String rooooot() {
-        return "→ /";
-    }
-
     /**
      * refresh_token 쿠키를 이용해 access/refresh 토큰을 재발급한다.
      *
@@ -73,12 +66,6 @@ public class AuthController {
         return ResponseEntity.ok()
                 .headers(headers)
                 .body(ApiResponse.noContent());
-    }
-
-    // To Do: 삭제할것
-    @GetMapping("/login/success")
-    public String loginSuccess() {
-        return "→ LOGIN SUCCESS!";
     }
 
     /**
