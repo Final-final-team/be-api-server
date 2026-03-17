@@ -3,6 +3,10 @@ package com.example.workmanagement.domain.project.service;
 import com.example.workmanagement.domain.project.entity.ProjectMember;
 import com.example.workmanagement.domain.project.entity.ProjectMemberStatus;
 import com.example.workmanagement.domain.project.repository.ProjectMemberRepository;
+import com.example.workmanagement.domain.project.service.result.ProjectMemberBasicResult;
+import com.example.workmanagement.domain.project.service.result.ProjectMemberRoleResult;
+import com.example.workmanagement.domain.project.service.result.ProjectMemberRoleProjectionResult;
+import com.example.workmanagement.domain.project.service.result.ProjectMemberWithRolesResult;
 import com.example.workmanagement.global.role.entity.ProjectMemberRole;
 import com.example.workmanagement.global.role.entity.Role;
 import com.example.workmanagement.global.role.repository.ProjectMemberRoleRepository;
@@ -40,6 +44,13 @@ public class ProjectMemberQueryService {
         return projectMemberRepository.findByProjectId(projectId)
                 .stream()
                 .filter(member -> member.getStatus() == ProjectMemberStatus.ACTIVE)
+                .toList();
+    }
+
+    // policy: PJM-P-05 (비활성 멤버는 응답 DTO에서 제외)
+    public List<ProjectMemberBasicResult> findActiveMemberResults(Long projectId) {
+        return findActiveMembers(projectId).stream()
+                .map(this::toBasicResult)
                 .toList();
     }
 
@@ -96,5 +107,59 @@ public class ProjectMemberQueryService {
             );
         }
         return snapshotsByMember;
+    }
+
+    // policy: ROL-P-03(다중 Role 합집합), ROL-P-04(변경 즉시 반영), PJM-P-05(비활성 멤버 제외)
+    public List<ProjectMemberWithRolesResult> findActiveMemberWithRolesResults(Long projectId) {
+        Map<ProjectMember, List<Role>> memberRoleSnapshots = findActiveMembersWithRoles(projectId);
+        if (memberRoleSnapshots.isEmpty()) {
+            return List.of();
+        }
+
+        List<ProjectMemberRoleProjectionResult> roleProjections = memberRoleSnapshots.entrySet().stream()
+                .flatMap(entry -> entry.getValue().stream()
+                        .map(role -> toRoleProjectionResult(entry.getKey().getId(), role)))
+                .toList();
+
+        Map<Long, List<ProjectMemberRoleResult>> rolesByMemberId = roleProjections.stream()
+                .collect(Collectors.groupingBy(
+                        ProjectMemberRoleProjectionResult::projectMemberId,
+                        Collectors.mapping(this::toRoleResult, Collectors.toList())
+                ));
+
+        return memberRoleSnapshots.entrySet().stream()
+                .map(entry -> new ProjectMemberWithRolesResult(
+                        toBasicResult(entry.getKey()),
+                        List.copyOf(rolesByMemberId.getOrDefault(entry.getKey().getId(), List.of()))
+                ))
+                .toList();
+    }
+
+    private ProjectMemberBasicResult toBasicResult(ProjectMember member) {
+        return new ProjectMemberBasicResult(
+                member.getId(),
+                member.getProjectId(),
+                member.getUserId(),
+                member.getStatus()
+        );
+    }
+
+    private ProjectMemberRoleProjectionResult toRoleProjectionResult(Long projectMemberId, Role role) {
+        return new ProjectMemberRoleProjectionResult(
+                projectMemberId,
+                role.getId(),
+                role.getCode(),
+                role.getName(),
+                role.getDescription()
+        );
+    }
+
+    private ProjectMemberRoleResult toRoleResult(ProjectMemberRoleProjectionResult projection) {
+        return new ProjectMemberRoleResult(
+                projection.roleId(),
+                projection.roleCode(),
+                projection.roleName(),
+                projection.roleDescription()
+        );
     }
 }
