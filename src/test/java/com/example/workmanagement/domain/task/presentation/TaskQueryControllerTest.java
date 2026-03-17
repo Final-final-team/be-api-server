@@ -38,7 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(MockitoExtension.class)
-class TaskControllerTest {
+class TaskQueryControllerTest {
 
     @Mock
     private TaskQueryService taskQueryService;
@@ -47,7 +47,7 @@ class TaskControllerTest {
 
     @BeforeEach
     void setUp() {
-        TaskController controller = new TaskController(taskQueryService);
+        TaskQueryController controller = new TaskQueryController(taskQueryService);
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(

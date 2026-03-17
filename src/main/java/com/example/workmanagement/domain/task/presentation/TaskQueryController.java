@@ -24,11 +24,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/projects/{projectId}/tasks")
 @Tag(name = "업무", description = "업무 조회 API")
-public class TaskController {
+public class TaskQueryController {
 
     private final TaskQueryService taskQueryService;
 
-    public TaskController(TaskQueryService taskQueryService) {
+    public TaskQueryController(TaskQueryService taskQueryService) {
         this.taskQueryService = taskQueryService;
     }
 
