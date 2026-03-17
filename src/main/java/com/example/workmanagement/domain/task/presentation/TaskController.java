@@ -36,6 +36,7 @@ public class TaskController {
     @Operation(summary = "업무 상세 조회", description = "특정 프로젝트의 업무 상세 정보를 조회합니다.")
     public ResponseEntity<ApiResponse<TaskDetailResult>> getTask(
 
+            @Parameter(hidden = true)
             @AuthenticatedUserId
             Long actorId,
 
@@ -52,9 +53,14 @@ public class TaskController {
     }
 
     @GetMapping
-    @Operation(summary = "업무 목록 조회", description = "프로젝트 단위 업무 목록을 상태 필터와 페이지네이션 조건으로 조회합니다.")
+    @Operation(
+            summary = "업무 목록 조회",
+            description = "프로젝트 단위 업무 목록을 상태 필터와 페이지네이션 조건으로 조회합니다. "
+                    + "기본값은 page=0, size=20, sort=createdAt,desc 입니다."
+    )
     public ResponseEntity<ApiResponse<TaskPageResult<TaskSummaryResult>>> getTasks(
 
+            @Parameter(hidden = true)
             @AuthenticatedUserId
             Long actorId,
 
@@ -66,6 +72,7 @@ public class TaskController {
             @RequestParam(value = "statuses", required = false)
             List<TaskStatus> statuses,
 
+            @Parameter(description = "페이지네이션(page,size,sort). 예: page=0&size=20&sort=createdAt,desc")
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable
     ) {
