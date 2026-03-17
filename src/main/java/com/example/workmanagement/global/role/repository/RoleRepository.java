@@ -13,6 +13,8 @@ public interface RoleRepository extends JpaRepository<Role, Long> {
 
     List<Role> findByProjectIdAndIsSystemTrue(Long projectId);
 
+    List<Role> findByProjectIdAndIsActiveTrue(Long projectId);
+
     // policy: ROL-P-03 (권한 합집합 계산)
     List<Role> findByIdInAndIsActiveTrue(Collection<Long> roleIds);
 }
