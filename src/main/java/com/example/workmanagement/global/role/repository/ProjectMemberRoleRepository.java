@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 public interface ProjectMemberRoleRepository extends JpaRepository<ProjectMemberRole, Long> {
     List<ProjectMemberRole> findByProjectMemberIdAndRevokedAtIsNull(Long projectMemberId);
@@ -16,6 +17,12 @@ public interface ProjectMemberRoleRepository extends JpaRepository<ProjectMember
 
     // policy: ROL-P-03 (권한 합집합 계산), PJM-P-05 (멤버별 역할 조회)
     List<ProjectMemberRole> findByProjectMemberIdInAndRevokedAtIsNull(Collection<Long> projectMemberIds);
+
+    // policy: ROL-P-05 (역할 회수 시 활성 링크 조회)
+    Optional<ProjectMemberRole> findByProjectMemberIdAndRoleIdAndRevokedAtIsNull(
+        Long projectMemberId,
+        Long roleId
+    );
 
     @Query("""
             select pmr
@@ -30,6 +37,22 @@ public interface ProjectMemberRoleRepository extends JpaRepository<ProjectMember
             """)
     List<ProjectMemberRole> findActiveRoleLinksByProjectId(
             @Param("projectId") Long projectId,
+            @Param("activeStatus") ProjectMemberStatus activeStatus
+    );
+
+    // policy: ROL-P-06, PJM-P-06 (마지막 리더 보호 - 프로젝트 내 활성 리더 수 조회)
+    @Query("""
+            select count(distinct pmr.projectMemberId)
+            from ProjectMemberRole pmr
+            join com.example.workmanagement.domain.project.entity.ProjectMember pm on pm.id = pmr.projectMemberId
+            where pmr.roleId in :leaderRoleIds
+              and pmr.revokedAt is null
+              and pm.projectId = :projectId
+              and pm.status = :activeStatus
+            """)
+    long countActiveLeadersByProjectId(
+            @Param("projectId") Long projectId,
+            @Param("leaderRoleIds") Collection<Long> leaderRoleIds,
             @Param("activeStatus") ProjectMemberStatus activeStatus
     );
 }
