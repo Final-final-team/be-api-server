@@ -37,11 +37,6 @@ import java.util.regex.Pattern;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User {
 
-    private static final int MIN_NICKNAME_LENGTH = 2;
-    private static final Pattern EMAIL_PATTERN = Pattern.compile(
-            "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"
-    );
-
     // ----- fields
 
     @Id
@@ -128,7 +123,7 @@ public class User {
         if (email.length() > UserAccountConstants.MAX_EMAIL_LENGTH) {
             throw new UserDomainException(UserErrorCode.USER_INVALID_ARGUMENT, "회원 이메일 길이가 허용 범위를 초과했습니다.");
         }
-        if (!EMAIL_PATTERN.matcher(email).matches()) {
+        if (!UserAccountConstants.EMAIL_PATTERN.matcher(email).matches()) {
             throw new UserDomainException(UserErrorCode.USER_INVALID_ARGUMENT, "회원 이메일 형식이 올바르지 않습니다.");
         }
     }
@@ -137,7 +132,7 @@ public class User {
         if (nickname == null || nickname.isBlank()) {
             throw new UserDomainException(UserErrorCode.USER_INVALID_ARGUMENT, "회원 닉네임은 비어 있을 수 없습니다.");
         }
-        if (nickname.length() < MIN_NICKNAME_LENGTH) {
+        if (nickname.length() < UserAccountConstants.MIN_NICKNAME_LENGTH) {
             throw new UserDomainException(UserErrorCode.USER_INVALID_ARGUMENT, "회원 닉네임은 최소 2자 이상이어야 합니다.");
         }
         if (nickname.length() > UserAccountConstants.MAX_NICKNAME_LENGTH) {
