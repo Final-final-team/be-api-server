@@ -12,9 +12,7 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "app.auth")
 public class AuthProperties {
 
-    private static final String DEFAULT_LOGIN_SUCCESS_REDIRECT_URL = "http://localhost:5173/auth/callback";
-
-    private String loginSuccessRedirectUrl = DEFAULT_LOGIN_SUCCESS_REDIRECT_URL;
+    private String loginSuccessRedirectUrl;
 
     // Java record처럼 읽기 전용 느낌으로 쓰기 위한 네이밍
     public String loginSuccessRedirectUrl() {
@@ -22,11 +20,6 @@ public class AuthProperties {
     }
 
     public void setLoginSuccessRedirectUrl(String loginSuccessRedirectUrl) {
-        // 빈 값이면 안전한 기본값으로 되돌린다.
-        if (loginSuccessRedirectUrl == null || loginSuccessRedirectUrl.isBlank()) {
-            this.loginSuccessRedirectUrl = DEFAULT_LOGIN_SUCCESS_REDIRECT_URL;
-            return;
-        }
         this.loginSuccessRedirectUrl = loginSuccessRedirectUrl;
     }
 }
