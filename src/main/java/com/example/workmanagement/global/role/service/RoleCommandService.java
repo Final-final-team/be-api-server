@@ -7,13 +7,17 @@ import com.example.workmanagement.domain.project.error.ProjectErrorCode;
 import com.example.workmanagement.domain.project.repository.ProjectMemberRepository;
 import com.example.workmanagement.global.role.entity.ProjectMemberRole;
 import com.example.workmanagement.global.role.entity.Role;
+import com.example.workmanagement.global.role.entity.RoleAuditLog;
+import com.example.workmanagement.global.role.entity.RoleAuditActionType;
 import com.example.workmanagement.global.role.error.RoleDomainException;
 import com.example.workmanagement.global.role.error.RoleErrorCode;
 import com.example.workmanagement.global.role.repository.ProjectMemberRoleRepository;
 import com.example.workmanagement.global.role.repository.RoleRepository;
+import com.example.workmanagement.global.role.repository.RoleAuditLogRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import java.time.Instant;
 
 @Service
 @Transactional
@@ -22,15 +26,18 @@ public class RoleCommandService {
     private final RoleRepository roleRepository;
     private final ProjectMemberRoleRepository projectMemberRoleRepository;
     private final ProjectMemberRepository projectMemberRepository;
+    private final RoleAuditLogRepository roleAuditLogRepository;
 
     public RoleCommandService(
             RoleRepository roleRepository,
             ProjectMemberRoleRepository projectMemberRoleRepository,
-            ProjectMemberRepository projectMemberRepository
+            ProjectMemberRepository projectMemberRepository,
+            RoleAuditLogRepository roleAuditLogRepository
     ) {
         this.roleRepository = roleRepository;
         this.projectMemberRoleRepository = projectMemberRoleRepository;
         this.projectMemberRepository = projectMemberRepository;
+        this.roleAuditLogRepository = roleAuditLogRepository;
     }
 
     /**
@@ -73,7 +80,17 @@ public class RoleCommandService {
         // 3. 역할 부여
         ProjectMemberRole memberRole = ProjectMemberRole.assign(targetPmId, roleId, actorPmId);
         
-        // TODO: Commit 3 - Audit log 기록
+        // policy: ROL-P-07 (감사 로그 기록)
+        RoleAuditLog auditLog = RoleAuditLog.of(
+                projectId,
+                roleId,
+                actorPmId,
+                RoleAuditActionType.ROLE_GRANTED,
+                null,  // beforePermissionsJson
+                buildRoleInfoJson(role),  // afterPermissionsJson
+                Instant.now()
+        );
+        roleAuditLogRepository.save(auditLog);
 
         return projectMemberRoleRepository.save(memberRole);
     }
@@ -123,8 +140,27 @@ public class RoleCommandService {
         // 3. 역할 회수
         memberRole.revoke(actorPmId);
 
-        // TODO: Commit 3 - Audit log 기록
+        // policy: ROL-P-07 (감사 로그 기록)
+        RoleAuditLog auditLog = RoleAuditLog.of(
+                projectId,
+                roleId,
+                actorPmId,
+                RoleAuditActionType.ROLE_REVOKED,
+                buildRoleInfoJson(role),  // beforePermissionsJson
+                null,  // afterPermissionsJson
+                Instant.now()
+        );
+        roleAuditLogRepository.save(auditLog);
 
         return memberRole;
+    }
+
+    /**
+     * Role 정보를 JSON 형식으로 반환한다.
+     * 간단한 형식으로 역할명만 기록 (확장 가능)
+     */
+    private String buildRoleInfoJson(Role role) {
+        return String.format("{\"roleId\":%d,\"roleName\":\"%s\",\"roleCode\":\"%s\"}",
+                role.getId(), role.getName(), role.getCode());
     }
 }
