@@ -12,7 +12,8 @@ public enum RoleErrorCode implements ErrorCode {
     ROLE_IN_USE(HttpStatus.CONFLICT, "ROLE_IN_USE", "현재 사용 중인 역할은 삭제할 수 없습니다"),
     LAST_LEADER_CANNOT_BE_REMOVED(HttpStatus.BAD_REQUEST, "LAST_LEADER_CANNOT_BE_REMOVED", "마지막 리더 역할은 제거할 수 없습니다"),
     ROLE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "ROLE_ACCESS_DENIED", "역할 관리 권한이 없습니다"),
-    ROLE_NOT_ASSIGNED(HttpStatus.BAD_REQUEST, "ROLE_NOT_ASSIGNED", "해당 멤버에게 부여되지 않은 역할입니다")
+    ROLE_NOT_ASSIGNED(HttpStatus.BAD_REQUEST, "ROLE_NOT_ASSIGNED", "해당 멤버에게 부여되지 않은 역할입니다"),
+    INACTIVE_MEMBER_ROLE_ASSIGN_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "INACTIVE_MEMBER_ROLE_ASSIGN_NOT_ALLOWED", "비활성 멤버에게는 역할을 부여할 수 없습니다")
 
     ;
 

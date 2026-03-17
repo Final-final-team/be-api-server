@@ -39,4 +39,20 @@ public interface ProjectMemberRoleRepository extends JpaRepository<ProjectMember
             @Param("projectId") Long projectId,
             @Param("activeStatus") ProjectMemberStatus activeStatus
     );
+
+    // policy: ROL-P-06, PJM-P-06 (마지막 리더 보호 - 프로젝트 내 활성 리더 수 조회)
+    @Query("""
+            select count(distinct pmr.projectMemberId)
+            from ProjectMemberRole pmr
+            join com.example.workmanagement.domain.project.entity.ProjectMember pm on pm.id = pmr.projectMemberId
+            where pmr.roleId in :leaderRoleIds
+              and pmr.revokedAt is null
+              and pm.projectId = :projectId
+              and pm.status = :activeStatus
+            """)
+    long countActiveLeadersByProjectId(
+            @Param("projectId") Long projectId,
+            @Param("leaderRoleIds") Collection<Long> leaderRoleIds,
+            @Param("activeStatus") ProjectMemberStatus activeStatus
+    );
 }

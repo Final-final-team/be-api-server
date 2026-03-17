@@ -1,6 +1,7 @@
 package com.example.workmanagement.global.role.service;
 
 import com.example.workmanagement.domain.project.entity.ProjectMember;
+import com.example.workmanagement.domain.project.entity.ProjectMemberStatus;
 import com.example.workmanagement.domain.project.error.ProjectDomainException;
 import com.example.workmanagement.domain.project.error.ProjectErrorCode;
 import com.example.workmanagement.domain.project.repository.ProjectMemberRepository;
@@ -12,6 +13,7 @@ import com.example.workmanagement.global.role.repository.ProjectMemberRoleReposi
 import com.example.workmanagement.global.role.repository.RoleRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.List;
 
 @Service
 @Transactional
@@ -58,7 +60,15 @@ public class RoleCommandService {
             throw new ProjectDomainException(ProjectErrorCode.PROJECT_MEMBER_NOT_FOUND);
         }
 
-        // TODO: Commit 2 - Policy guards (시스템 role, 비활성 멤버)
+        // policy: ROL-P-02, ROL-P-05 (시스템 Role 부여 금지)
+        if (role.getIsSystem()) {
+            throw new RoleDomainException(RoleErrorCode.SYSTEM_ROLE_IMMUTABLE);
+        }
+
+        // policy: PJM-P-05 (비활성 멤버 부여 차단)
+        if (targetMember.getStatus() == ProjectMemberStatus.INACTIVE) {
+            throw new RoleDomainException(RoleErrorCode.INACTIVE_MEMBER_ROLE_ASSIGN_NOT_ALLOWED);
+        }
 
         // 3. 역할 부여
         ProjectMemberRole memberRole = ProjectMemberRole.assign(targetPmId, roleId, actorPmId);
@@ -92,7 +102,23 @@ public class RoleCommandService {
                 .findByProjectMemberIdAndRoleIdAndRevokedAtIsNull(targetPmId, roleId)
                 .orElseThrow(() -> new RoleDomainException(RoleErrorCode.ROLE_NOT_ASSIGNED));
 
-        // TODO: Commit 2 - Policy guards (시스템 role, 리더 보호)
+        // policy: ROL-P-02, ROL-P-05 (시스템 Role 회수 금지)
+        if (role.getIsSystem()) {
+            throw new RoleDomainException(RoleErrorCode.SYSTEM_ROLE_IMMUTABLE);
+        }
+
+        // policy: ROL-P-06, PJM-P-06 (마지막 리더 보호)
+        if (role.getIsLeaderRole()) {
+            List<Role> leaderRoles = roleRepository.findByProjectIdAndIsLeaderRoleTrueAndIsActiveTrue(projectId);
+            List<Long> leaderRoleIds = leaderRoles.stream().map(Role::getId).toList();
+            
+            long activeLeaderCount = projectMemberRoleRepository.countActiveLeadersByProjectId(
+                    projectId, leaderRoleIds, ProjectMemberStatus.ACTIVE);
+            
+            if (activeLeaderCount <= 1) {
+                throw new RoleDomainException(RoleErrorCode.LAST_LEADER_CANNOT_BE_REMOVED);
+            }
+        }
 
         // 3. 역할 회수
         memberRole.revoke(actorPmId);
