@@ -9,13 +9,16 @@ import com.example.workmanagement.domain.review.dto.ReviewUpdateRequest;
 import com.example.workmanagement.domain.review.service.ReviewCommandService;
 import com.example.workmanagement.domain.review.service.ReviewQueryService;
 import com.example.workmanagement.domain.review.service.result.ReviewDetailResult;
+import com.example.workmanagement.domain.review.service.result.ReviewPageResult;
 import com.example.workmanagement.domain.review.service.result.ReviewSummaryResult;
 import com.example.workmanagement.global.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import java.util.List;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -49,10 +52,6 @@ public class ReviewController {
         this.reviewDtoMapper = reviewDtoMapper;
     }
 
-    /**
-     * 최초 상신과 재상신을 포함한 검토 제출 요청을 처리한다.
-     * 정책 코드: RVW-P-00-002, RVW-P-00-003, RVW-P-00-004, RVW-P-01-001
-     */
     @PostMapping("/tasks/{taskId}/reviews")
     @Operation(summary = "검토 제출", description = "업무에 대한 최초 상신 또는 재상신 검토를 생성합니다.")
     public ResponseEntity<ApiResponse<ReviewDetailResult>> submitReview(
@@ -69,35 +68,31 @@ public class ReviewController {
                 reviewDtoMapper.toSubmitCommand(request),
                 resolveActor(actorId, roles, permissions)
         );
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(result
-                ));
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(result));
     }
 
-    /**
-     * 업무 단위의 검토 목록을 조회한다.
-     * 정책 코드: RVW-P-02-001, RVW-P-15-003
-     */
     @GetMapping("/tasks/{taskId}/reviews")
-    @Operation(summary = "업무별 검토 목록 조회", description = "특정 업무에 연결된 검토 목록을 최신 라운드 순으로 조회합니다.")
-    public ResponseEntity<ApiResponse<List<ReviewSummaryResult>>> getReviewsByTask(
+    @Operation(summary = "업무별 검토 목록 조회", description = "특정 업무에 연결된 검토 목록을 페이지 조건과 함께 조회합니다.")
+    public ResponseEntity<ApiResponse<ReviewPageResult<ReviewSummaryResult>>> getReviewsByTask(
             @Parameter(description = "검토 목록을 조회할 업무 ID", example = "1")
             @PathVariable Long taskId,
             @Parameter(description = "요청자 사용자 ID", example = "101")
             @RequestHeader("X-Actor-Id") String actorId,
             @RequestHeader(value = "X-Actor-Roles", required = false) String roles,
-            @RequestHeader(value = "X-Actor-Permissions", required = false) String permissions
+            @RequestHeader(value = "X-Actor-Permissions", required = false) String permissions,
+            @Parameter(description = "페이지네이션(page,size,sort). 예: page=0&size=20&sort=roundNo,desc")
+            @PageableDefault(size = 20, sort = "roundNo", direction = Sort.Direction.DESC)
+            Pageable pageable
     ) {
-        return ResponseEntity.ok(
-                ApiResponse.success(reviewQueryService.findReviewsByTask(taskId, resolveActor(actorId, roles, permissions))
+        return ResponseEntity.ok(ApiResponse.success(
+                reviewQueryService.findReviewsByTask(
+                        taskId,
+                        resolveActor(actorId, roles, permissions),
+                        pageable
                 )
-        );
+        ));
     }
 
-    /**
-     * 검토 상세를 조회한다.
-     * 정책 코드: RVW-P-02-001, RVW-P-15-001
-     */
     @GetMapping("/reviews/{reviewId}")
     @Operation(summary = "검토 상세 조회", description = "검토 본문, 참조자, 추가 검토자, 첨부, 코멘트를 포함한 상세 정보를 조회합니다.")
     public ResponseEntity<ApiResponse<ReviewDetailResult>> getReview(
@@ -108,14 +103,11 @@ public class ReviewController {
             @RequestHeader(value = "X-Actor-Roles", required = false) String roles,
             @RequestHeader(value = "X-Actor-Permissions", required = false) String permissions
     ) {
-        return ResponseEntity.ok(ApiResponse.success(reviewQueryService.findReview(reviewId, resolveActor(actorId, roles, permissions))
+        return ResponseEntity.ok(ApiResponse.success(
+                reviewQueryService.findReview(reviewId, resolveActor(actorId, roles, permissions))
         ));
     }
 
-    /**
-     * 제출된 검토의 본문을 수정한다.
-     * 정책 코드: RVW-P-03-005, RVW-P-10-001
-     */
     @PatchMapping("/reviews/{reviewId}")
     @Operation(summary = "검토 본문 수정", description = "제출 상태의 검토 본문을 수정합니다.")
     public ResponseEntity<ApiResponse<ReviewDetailResult>> updateReview(
@@ -135,14 +127,9 @@ public class ReviewController {
                 reviewDtoMapper.toUpdateReviewCommand(request),
                 resolveActor(actorId, roles, permissions)
         );
-        return ResponseEntity.ok(ApiResponse.success(result
-        ));
+        return ResponseEntity.ok(ApiResponse.success(result));
     }
 
-    /**
-     * 제출된 검토를 승인한다.
-     * 정책 코드: RVW-P-01-002, RVW-P-03-002, RVW-P-10-001
-     */
     @PostMapping("/reviews/{reviewId}/approve")
     @Operation(summary = "검토 승인", description = "제출된 검토를 승인하고 연결된 업무를 완료 상태로 전환합니다.")
     public ResponseEntity<ApiResponse<ReviewDetailResult>> approveReview(
@@ -160,16 +147,9 @@ public class ReviewController {
                 lockVersion,
                 resolveActor(actorId, roles, permissions)
         );
-        return ResponseEntity.ok(
-                ApiResponse.success(result
-                )
-        );
+        return ResponseEntity.ok(ApiResponse.success(result));
     }
 
-    /**
-     * 제출된 검토를 반려한다.
-     * 정책 코드: RVW-P-01-003, RVW-P-03-002, RVW-P-10-001, RVW-P-12-001
-     */
     @PostMapping("/reviews/{reviewId}/reject")
     @Operation(summary = "검토 반려", description = "제출된 검토를 반려하고 연결된 업무를 진행 중 상태로 되돌립니다.")
     public ResponseEntity<ApiResponse<ReviewDetailResult>> rejectReview(
@@ -189,16 +169,9 @@ public class ReviewController {
                 reviewDtoMapper.toRejectCommand(request),
                 resolveActor(actorId, roles, permissions)
         );
-        return ResponseEntity.ok(
-                ApiResponse.success(result
-                )
-        );
+        return ResponseEntity.ok(ApiResponse.success(result));
     }
 
-    /**
-     * 제출된 검토를 취소한다.
-     * 정책 코드: RVW-P-01-004, RVW-P-03-005, RVW-P-10-001, RVW-P-12-002
-     */
     @PostMapping("/reviews/{reviewId}/cancel")
     @Operation(summary = "검토 취소", description = "제출된 검토를 취소하고 연결된 업무를 진행 중 상태로 되돌립니다.")
     public ResponseEntity<ApiResponse<ReviewDetailResult>> cancelReview(
@@ -219,15 +192,9 @@ public class ReviewController {
                 reviewDtoMapper.toCancelCommand(cancelRequest),
                 resolveActor(actorId, roles, permissions)
         );
-        return ResponseEntity.ok(
-                ApiResponse.success(result
-                )
-        );
+        return ResponseEntity.ok(ApiResponse.success(result));
     }
 
-    /**
-     * 임시 헤더 값을 ActorContext로 변환한다.
-     */
     private ActorContext resolveActor(String actorId, String roles, String permissions) {
         return actorContextResolver.resolve(actorId, roles, permissions);
     }

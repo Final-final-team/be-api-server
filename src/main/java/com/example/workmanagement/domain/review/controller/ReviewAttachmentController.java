@@ -5,6 +5,8 @@ import com.example.workmanagement.domain.review.authorization.ActorContextResolv
 import com.example.workmanagement.domain.review.dto.ReviewAttachmentConfirmRequest;
 import com.example.workmanagement.domain.review.dto.ReviewAttachmentPresignRequest;
 import com.example.workmanagement.domain.review.service.ReviewCommandService;
+import com.example.workmanagement.domain.review.service.ReviewQueryService;
+import com.example.workmanagement.domain.review.service.result.ReviewAttachmentDownloadResult;
 import com.example.workmanagement.domain.review.service.result.ReviewAttachmentPresignResult;
 import com.example.workmanagement.domain.review.service.result.ReviewDetailResult;
 import com.example.workmanagement.global.response.ApiResponse;
@@ -15,6 +17,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -24,21 +27,22 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/reviews/{reviewId}/attachments")
-@Tag(name = "검토 첨부", description = "검토 첨부 업로드와 삭제 API")
-// TODO 정책 코드: RVW-P-07-011
-// 첨부 다운로드 인가 API는 아직 구현되지 않았다.
+@Tag(name = "검토 첨부", description = "검토 첨부 업로드, 다운로드, 삭제 API")
 public class ReviewAttachmentController {
 
     private final ReviewCommandService reviewCommandService;
+    private final ReviewQueryService reviewQueryService;
     private final ActorContextResolver actorContextResolver;
     private final ReviewDtoMapper reviewDtoMapper;
 
     public ReviewAttachmentController(
             ReviewCommandService reviewCommandService,
+            ReviewQueryService reviewQueryService,
             ActorContextResolver actorContextResolver,
             ReviewDtoMapper reviewDtoMapper
     ) {
         this.reviewCommandService = reviewCommandService;
+        this.reviewQueryService = reviewQueryService;
         this.actorContextResolver = actorContextResolver;
         this.reviewDtoMapper = reviewDtoMapper;
     }
@@ -61,7 +65,8 @@ public class ReviewAttachmentController {
             @Valid @RequestBody ReviewAttachmentPresignRequest request
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(reviewCommandService.createAttachmentPresignUrl(
+                .body(ApiResponse.success(
+                        reviewCommandService.createAttachmentPresignUrl(
                                 reviewId,
                                 lockVersion,
                                 reviewDtoMapper.toCreateAttachmentPresignCommand(request),
@@ -94,8 +99,32 @@ public class ReviewAttachmentController {
                 resolveActor(actorId, roles, permissions)
         );
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(result
-                ));
+                .body(ApiResponse.success(result));
+    }
+
+    /**
+     * 검토 첨부 다운로드용 presigned URL을 발급한다.
+     * 정책 코드: RVW-P-07-011
+     */
+    @GetMapping("/{attachmentId}/download")
+    @Operation(summary = "첨부 다운로드 URL 발급", description = "검토 첨부 파일 다운로드를 위한 presigned URL을 발급합니다.")
+    public ResponseEntity<ApiResponse<ReviewAttachmentDownloadResult>> createDownloadUrl(
+            @Parameter(description = "대상 검토 ID", example = "10")
+            @PathVariable Long reviewId,
+            @Parameter(description = "대상 첨부 ID", example = "5")
+            @PathVariable Long attachmentId,
+            @Parameter(description = "요청자 사용자 ID", example = "101")
+            @RequestHeader("X-Actor-Id") String actorId,
+            @RequestHeader(value = "X-Actor-Roles", required = false) String roles,
+            @RequestHeader(value = "X-Actor-Permissions", required = false) String permissions
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                reviewQueryService.createAttachmentDownloadUrl(
+                        reviewId,
+                        attachmentId,
+                        resolveActor(actorId, roles, permissions)
+                )
+        ));
     }
 
     /**
@@ -122,13 +151,9 @@ public class ReviewAttachmentController {
                 lockVersion,
                 resolveActor(actorId, roles, permissions)
         );
-        return ResponseEntity.ok(ApiResponse.success(result
-        ));
+        return ResponseEntity.ok(ApiResponse.success(result));
     }
 
-    /**
-     * 임시 헤더 값을 ActorContext로 변환한다.
-     */
     private ActorContext resolveActor(String actorId, String roles, String permissions) {
         return actorContextResolver.resolve(actorId, roles, permissions);
     }
