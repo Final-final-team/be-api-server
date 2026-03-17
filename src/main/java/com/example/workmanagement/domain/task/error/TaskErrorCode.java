@@ -14,6 +14,7 @@ public enum TaskErrorCode implements ErrorCode {
     TASK_DATE_RANGE_INVALID(HttpStatus.BAD_REQUEST, "업무 시작일은 마감일보다 늦을 수 없습니다."),
     TASK_PRIORITY_INVALID(HttpStatus.BAD_REQUEST, "업무 우선순위 값이 유효하지 않습니다."),
     TASK_STATUS_INVALID(HttpStatus.BAD_REQUEST, "업무 상태 값이 유효하지 않습니다."),
+    TASK_ACTOR_IS_TARGET(HttpStatus.BAD_REQUEST, "할당 요청에서 대상 회원이 자기자신일 수 없습니다."),
 
     TASK_STATUS_TRANSITION_NOT_ALLOWED(HttpStatus.CONFLICT, "현재 상태에서는 요청한 상태 전이가 허용되지 않습니다."),
     TASK_UPDATE_NOT_ALLOWED(HttpStatus.CONFLICT, "현재 상태에서는 업무를 수정할 수 없습니다."),

@@ -15,6 +15,7 @@ import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -105,6 +106,74 @@ public class Task {
             TaskPriority priority
     ) {
         return new Task(projectId, authorId, title, description, startDate, dueDate, priority);
+    }
+
+    // ----- business methods
+
+    public void updateTitle(String title) {
+        TaskValidators.ensureUpdatableStatus(status);
+        this.title = TaskValidators.normalizeTitle(title);
+    }
+
+    public void updateDescription(String description) {
+        TaskValidators.ensureUpdatableStatus(status);
+        this.description = TaskValidators.normalizeDescription(description);
+    }
+
+    public void updateStartDate(LocalDate startDate) {
+        TaskValidators.ensureUpdatableStatus(status);
+        TaskValidators.validateDateOrder(startDate, dueDate);
+        this.startDate = startDate;
+    }
+
+    public void updateDueDate(LocalDate dueDate) {
+        TaskValidators.ensureUpdatableStatus(status);
+        TaskValidators.validateDateOrder(startDate, dueDate);
+        this.dueDate = dueDate;
+    }
+
+    public void updatePriority(TaskPriority priority) {
+        TaskValidators.ensureUpdatableStatus(status);
+        this.priority = priority;
+    }
+
+    public void ensureAssignableStatus() {
+        TaskValidators.ensureAssignableStatus(status);
+    }
+
+    public void revertToPendingIfInProgress() {
+        if (status == TaskStatus.IN_PROGRESS) {
+            this.status = TaskStatus.PENDING;
+        }
+    }
+
+    public void start() {
+        if (status != TaskStatus.PENDING) {
+            throw new TaskDomainException(TaskErrorCode.TASK_STATUS_TRANSITION_NOT_ALLOWED);
+        }
+        this.status = TaskStatus.IN_PROGRESS;
+    }
+
+    public void cancelStart() {
+        if (status != TaskStatus.IN_PROGRESS) {
+            throw new TaskDomainException(TaskErrorCode.TASK_STATUS_TRANSITION_NOT_ALLOWED);
+        }
+        this.status = TaskStatus.PENDING;
+    }
+
+    public void forceComplete() {
+        if (status != TaskStatus.IN_REVIEW) {
+            throw new TaskDomainException(TaskErrorCode.TASK_STATUS_TRANSITION_NOT_ALLOWED);
+        }
+        this.status = TaskStatus.COMPLETED;
+    }
+
+    public boolean belongsToProject(Long projectId) {
+        return Objects.equals(this.projectId, projectId);
+    }
+
+    public boolean isAuthor(Long userId) {
+        return Objects.equals(this.authorId, userId);
     }
 
     private static Long validatePositiveId(Long id, String fieldName) {
