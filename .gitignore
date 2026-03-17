@@ -39,3 +39,4 @@ out/
 ### custom ###
 .env
 monitoring/logs
+*.p12
