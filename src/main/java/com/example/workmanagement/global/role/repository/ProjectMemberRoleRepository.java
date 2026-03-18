@@ -15,6 +15,8 @@ public interface ProjectMemberRoleRepository extends JpaRepository<ProjectMember
 
     List<ProjectMemberRole> findByRoleId(Long roleId);
 
+    List<ProjectMemberRole> findByRoleIdAndRevokedAtIsNull(Long roleId);
+
     // policy: ROL-P-03 (권한 합집합 계산), PJM-P-05 (멤버별 역할 조회)
     List<ProjectMemberRole> findByProjectMemberIdInAndRevokedAtIsNull(Collection<Long> projectMemberIds);
 
