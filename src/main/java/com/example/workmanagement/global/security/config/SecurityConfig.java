@@ -49,7 +49,8 @@ public class SecurityConfig {
                         .ignoringRequestMatchers(
                                 "/oauth2/authorization/google",
                                 "/login/oauth2/code/google",
-                                "/api/auth/refresh"
+                                "/api/auth/refresh",
+                                "/api/dev/auth/**"
                         )
                 )
 
@@ -60,7 +61,8 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/",
                                 "/error",
-                                "/api/auth/refresh"
+                                "/api/auth/refresh",
+                                "/api/dev/auth/**"
                         ).permitAll()
 
                         // 위에 명시된 주소 외에는 모두 인증 필요

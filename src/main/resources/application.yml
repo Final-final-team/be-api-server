@@ -65,7 +65,7 @@ springdoc:
 
 app:
   auth:
-    login-success-redirect-url: ${APP_AUTH_LOGIN_SUCCESS_REDIRECT_URL:https://task-automation-ui.vercel.app/auth/callback}
+    login-success-redirect-url: ${APP_AUTH_LOGIN_SUCCESS_REDIRECT_URL:https://rank-nonapplicative-fluidly.ngrok-free.dev/auth/callback}
     cookie-secure: ${APP_AUTH_COOKIE_SECURE:false}
     jwt:
       # 토큰 발급 및 검증 시 같은 값을 사용해야 함
@@ -78,13 +78,7 @@ app:
 
   cors:
     allowed-origins:
-      - https://task-automation-ui.vercel.app
-      - https://localhost:5173
-      - https://127.0.0.1:5173
-      - http://localhost:5173
-      - http://127.0.0.1:5173
-      - http://localhost:3000
-      - http://127.0.0.1:3000
+      - https://rank-nonapplicative-fluidly.ngrok-free.dev
 
 logging:
   level:

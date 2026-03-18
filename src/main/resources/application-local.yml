@@ -1,0 +1,42 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:h2:mem:finalback;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE}
+    driver-class-name: ${DB_DRIVER_CLASS_NAME:org.h2.Driver}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
+
+  jpa:
+    hibernate:
+      ddl-auto: ${JPA_DDL_AUTO:create-drop}
+    database-platform: ${JPA_DATABASE_PLATFORM:org.hibernate.dialect.H2Dialect}
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:local-client}
+            client-secret: ${GOOGLE_CLIENT_SECRET:local-secret}
+
+app:
+  auth:
+    login-success-redirect-url: ${APP_AUTH_LOGIN_SUCCESS_REDIRECT_URL:https://rank-nonapplicative-fluidly.ngrok-free.dev/auth/callback}
+    cookie-secure: ${APP_AUTH_COOKIE_SECURE:false}
+    jwt:
+      secret: local-dev-jwt-secret-key-32-bytes-minimum-value
+      issuer: local-dev
+      audience: local-dev
+
+server:
+  ssl:
+    enabled: ${SSL_ENABLED:true}
+    key-store: ${SSL_KEY_STORE:classpath:certs/local-dev.p12}
+    key-store-password: ${SSL_PASSWORD:changeit}
+    key-store-type: ${SSL_KEY_STORE_TYPE:PKCS12}
+    key-alias: ${SSL_KEY_ALIAS:local-dev}
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

@@ -5,6 +5,8 @@ import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface ReviewHistoryRepository extends JpaRepository<ReviewHistory, Long> {
     // TODO 정책 코드: RVW-P-11-006
@@ -19,4 +21,16 @@ public interface ReviewHistoryRepository extends JpaRepository<ReviewHistory, Lo
     List<ReviewHistory> findAllByReview_IdOrderByOccurredAtDesc(Long reviewId);
 
     Page<ReviewHistory> findAllByReview_Id(Long reviewId, Pageable pageable);
+
+    @Query("""
+            select rh
+            from ReviewHistory rh
+            where rh.review.taskId in (
+                select t.id
+                from Task t
+                where t.projectId = :projectId
+            )
+            order by rh.occurredAt desc
+            """)
+    List<ReviewHistory> findAllByProjectIdOrderByOccurredAtDesc(@Param("projectId") Long projectId);
 }
