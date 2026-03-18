@@ -18,6 +18,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.time.Instant;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -77,17 +80,42 @@ public class RoleCommandService {
             throw new RoleDomainException(RoleErrorCode.INACTIVE_MEMBER_ROLE_ASSIGN_NOT_ALLOWED);
         }
 
+        List<ActiveRoleLink> activeRoleLinks = findActiveRoleLinks(projectId, targetPmId);
+        for (ActiveRoleLink activeRoleLink : activeRoleLinks) {
+            if (Objects.equals(activeRoleLink.role().getId(), roleId)) {
+                return activeRoleLink.link();
+            }
+        }
+
+        // 프로젝트 멤버당 활성 역할은 1개만 유지한다.
+        for (ActiveRoleLink activeRoleLink : activeRoleLinks) {
+            if (Boolean.TRUE.equals(activeRoleLink.role().getIsLeaderRole())
+                    && !Boolean.TRUE.equals(role.getIsLeaderRole())) {
+                ensureLeaderRoleCanBeRevoked(projectId);
+            }
+
+            activeRoleLink.link().revoke(actorPmId);
+            roleAuditLogRepository.save(RoleAuditLog.of(
+                    projectId,
+                    activeRoleLink.role().getId(),
+                    actorPmId,
+                    RoleAuditActionType.ROLE_REVOKED,
+                    buildRoleInfoJson(activeRoleLink.role()),
+                    null,
+                    Instant.now()
+            ));
+        }
+
         // 3. 역할 부여
         ProjectMemberRole memberRole = ProjectMemberRole.assign(targetPmId, roleId, actorPmId);
-        
-        // policy: ROL-P-07 (감사 로그 기록)
+
         RoleAuditLog auditLog = RoleAuditLog.of(
                 projectId,
                 roleId,
                 actorPmId,
                 RoleAuditActionType.ROLE_GRANTED,
-                null,  // beforePermissionsJson
-                buildRoleInfoJson(role),  // afterPermissionsJson
+                null,
+                buildRoleInfoJson(role),
                 Instant.now()
         );
         roleAuditLogRepository.save(auditLog);
@@ -162,5 +190,48 @@ public class RoleCommandService {
     private String buildRoleInfoJson(Role role) {
         return String.format("{\"roleId\":%d,\"roleName\":\"%s\",\"roleCode\":\"%s\"}",
                 role.getId(), role.getName(), role.getCode());
+    }
+
+    private List<ActiveRoleLink> findActiveRoleLinks(Long projectId, Long projectMemberId) {
+        List<ProjectMemberRole> activeLinks = projectMemberRoleRepository.findByProjectMemberIdAndRevokedAtIsNull(projectMemberId);
+        if (activeLinks.isEmpty()) {
+            return List.of();
+        }
+
+        Set<Long> roleIds = activeLinks.stream()
+                .map(ProjectMemberRole::getRoleId)
+                .collect(Collectors.toSet());
+
+        return activeLinks.stream()
+                .map(link -> {
+                    Role linkedRole = roleRepository.findById(link.getRoleId())
+                            .filter(candidate -> Objects.equals(candidate.getProjectId(), projectId))
+                            .filter(Role::getIsActive)
+                            .orElse(null);
+                    if (linkedRole == null) {
+                        return null;
+                    }
+                    return new ActiveRoleLink(link, linkedRole);
+                })
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
+    private void ensureLeaderRoleCanBeRevoked(Long projectId) {
+        List<Role> leaderRoles = roleRepository.findByProjectIdAndIsLeaderRoleTrueAndIsActiveTrue(projectId);
+        List<Long> leaderRoleIds = leaderRoles.stream().map(Role::getId).toList();
+
+        long activeLeaderCount = projectMemberRoleRepository.countActiveLeadersByProjectId(
+                projectId,
+                leaderRoleIds,
+                ProjectMemberStatus.ACTIVE
+        );
+
+        if (activeLeaderCount <= 1) {
+            throw new RoleDomainException(RoleErrorCode.LAST_LEADER_CANNOT_BE_REMOVED);
+        }
+    }
+
+    private record ActiveRoleLink(ProjectMemberRole link, Role role) {
     }
 }

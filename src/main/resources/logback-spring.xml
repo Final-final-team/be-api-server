@@ -36,7 +36,7 @@
         </encoder>
     </appender>
 
-    <springProfile name="dev | default">
+    <springProfile name="local | dev | default">
         <logger name="kr.co.wground.api" level="DEBUG" />
 
         <logger name="org.hibernate.SQL" level="DEBUG" />

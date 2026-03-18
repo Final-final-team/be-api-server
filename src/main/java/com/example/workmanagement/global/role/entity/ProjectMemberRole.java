@@ -13,6 +13,8 @@ import java.util.Objects;
            @Index(name = "idx_pmr_member_active", columnList = "project_member_id, revoked_at"),
            @Index(name = "idx_pmr_role_active", columnList = "role_id, revoked_at")
        })
+// TODO: 운영 DB migration에서 `revoked_at is null` 조건의 partial unique index를 추가해
+// `project_member_id` 기준 활성 역할 1개 제약을 DB 레벨에서도 강제해야 한다.
 // policy: PJM-P-05 (멤버별 역할 조회 성능)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

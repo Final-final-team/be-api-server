@@ -21,8 +21,6 @@ import com.example.workmanagement.global.role.error.RoleErrorCode;
 import com.example.workmanagement.global.role.repository.ProjectMemberRoleRepository;
 import com.example.workmanagement.global.role.repository.RoleRepository;
 import com.example.workmanagement.global.role.service.SystemRoleInitializer;
-import java.util.ArrayList;
-import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,7 +30,6 @@ public class ProjectCommandService {
 
     private static final int MAX_NAME_LENGTH = 100;
     private static final String PROJECT_LEADER_CODE = "PROJECT_LEADER";
-    private static final String PROJECT_MEMBER_CODE = "PROJECT_MEMBER";
 
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
@@ -135,13 +132,7 @@ public class ProjectCommandService {
     private void assignInitialSystemRoles(Long projectId, Long creatorPmId) {
         Role leaderRole = roleRepository.findByProjectIdAndCode(projectId, PROJECT_LEADER_CODE)
                 .orElseThrow(() -> new ProjectDomainException(ProjectErrorCode.PROJECT_SYSTEM_ROLE_BOOTSTRAP_FAILED));
-        Role memberRole = roleRepository.findByProjectIdAndCode(projectId, PROJECT_MEMBER_CODE)
-                .orElseThrow(() -> new ProjectDomainException(ProjectErrorCode.PROJECT_SYSTEM_ROLE_BOOTSTRAP_FAILED));
-
-        List<ProjectMemberRole> initialRoleLinks = new ArrayList<>();
-        initialRoleLinks.add(ProjectMemberRole.assign(creatorPmId, leaderRole.getId(), creatorPmId));
-        initialRoleLinks.add(ProjectMemberRole.assign(creatorPmId, memberRole.getId(), creatorPmId));
-        projectMemberRoleRepository.saveAll(initialRoleLinks);
+        projectMemberRoleRepository.save(ProjectMemberRole.assign(creatorPmId, leaderRole.getId(), creatorPmId));
     }
 
     private void ensureProjectManagePermission(Long projectId, Long actorId) {

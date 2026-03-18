@@ -1,11 +1,14 @@
 package com.example.workmanagement.domain.project.presentation.dto;
 
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
-
 public record JoinProjectRequest(
-        @NotNull
-        @Positive
-        Long targetUserId
+        Long targetUserId,
+        String targetEmail
 ) {
+    public boolean hasTargetUserId() {
+        return targetUserId != null && targetUserId > 0L;
+    }
+
+    public boolean hasTargetEmail() {
+        return targetEmail != null && !targetEmail.isBlank();
+    }
 }

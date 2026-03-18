@@ -7,6 +7,9 @@ import com.example.workmanagement.domain.project.error.ProjectErrorCode;
 import com.example.workmanagement.domain.project.service.MembershipCommandService;
 import com.example.workmanagement.domain.project.service.ProjectMemberQueryService;
 import com.example.workmanagement.domain.project.service.command.JoinProjectCommand;
+import com.example.workmanagement.domain.user.exception.UserDomainException;
+import com.example.workmanagement.domain.user.exception.UserErrorCode;
+import com.example.workmanagement.domain.user.repository.UserRepository;
 import com.example.workmanagement.domain.project.service.command.LeaveProjectCommand;
 import com.example.workmanagement.domain.project.service.command.RemoveMemberCommand;
 import com.example.workmanagement.global.response.ApiResponse;
@@ -31,13 +34,16 @@ public class MembershipController {
 
     private final MembershipCommandService membershipCommandService;
     private final ProjectMemberQueryService projectMemberQueryService;
+    private final UserRepository userRepository;
 
     public MembershipController(
             MembershipCommandService membershipCommandService,
-            ProjectMemberQueryService projectMemberQueryService
+            ProjectMemberQueryService projectMemberQueryService,
+            UserRepository userRepository
     ) {
         this.membershipCommandService = membershipCommandService;
         this.projectMemberQueryService = projectMemberQueryService;
+        this.userRepository = userRepository;
     }
 
     @PostMapping
@@ -55,19 +61,38 @@ public class MembershipController {
             @RequestBody
             JoinProjectRequest request
     ) {
+        Long targetUserId = resolveTargetUserId(request);
+
         membershipCommandService.join(
-                new JoinProjectCommand(projectId, actorId, request.targetUserId())
+                new JoinProjectCommand(projectId, actorId, targetUserId)
         );
 
         var memberInfo = projectMemberQueryService.findActiveMemberResults(projectId)
                 .stream()
-                .filter(m -> m.userId().equals(request.targetUserId()))
+                .filter(m -> m.userId().equals(targetUserId))
                 .findFirst()
                 .orElseThrow(() -> new ProjectDomainException(ProjectErrorCode.PROJECT_MEMBER_NOT_FOUND));
 
         MembershipResponse response = MembershipResponse.fromMemberBasicResult(memberInfo);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(response));
+    }
+
+    private Long resolveTargetUserId(JoinProjectRequest request) {
+        if (request.hasTargetUserId()) {
+            return request.targetUserId();
+        }
+
+        if (request.hasTargetEmail()) {
+            return userRepository.findByEmail(request.targetEmail().trim())
+                    .map(user -> user.id())
+                    .orElseThrow(() -> new UserDomainException(UserErrorCode.USER_NOT_FOUND));
+        }
+
+        throw new ProjectDomainException(
+                ProjectErrorCode.PROJECT_NOT_FOUND,
+                "targetUserId or targetEmail must be provided"
+        );
     }
 
     @DeleteMapping("/me")
