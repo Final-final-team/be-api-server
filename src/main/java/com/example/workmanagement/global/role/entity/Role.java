@@ -177,4 +177,24 @@ public class Role {
         this.isActive = true;
         this.createdByPmId = Objects.requireNonNull(createdByPmId, "createdByPmId must not be null");
     }
+
+    public void updateDefinition(
+            String name,
+            String description,
+            Long projectPermissionBits,
+            Long taskPermissionBits,
+            Long reviewPermissionBits,
+            boolean leaderRole
+    ) {
+        this.name = Objects.requireNonNull(name, "name must not be null");
+        this.description = description;
+        this.projectPermissionBits = Objects.requireNonNull(projectPermissionBits, "projectPermissionBits must not be null");
+        this.taskPermissionBits = Objects.requireNonNull(taskPermissionBits, "taskPermissionBits must not be null");
+        this.reviewPermissionBits = Objects.requireNonNull(reviewPermissionBits, "reviewPermissionBits must not be null");
+        this.isLeaderRole = leaderRole;
+    }
+
+    public void deactivate() {
+        this.isActive = false;
+    }
 }

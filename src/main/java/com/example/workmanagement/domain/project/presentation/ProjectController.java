@@ -1,9 +1,10 @@
 package com.example.workmanagement.domain.project.presentation;
 
 import com.example.workmanagement.domain.project.presentation.dto.ProjectCreateRequest;
+import com.example.workmanagement.domain.project.presentation.dto.ProjectUpdateRequest;
 import com.example.workmanagement.domain.project.service.ProjectCommandService;
 import com.example.workmanagement.domain.project.service.ProjectQueryService;
-import com.example.workmanagement.domain.project.service.command.ProjectCreateCommand;
+import com.example.workmanagement.domain.project.service.command.ProjectDeleteCommand;
 import com.example.workmanagement.domain.project.service.result.ProjectDetailResult;
 import com.example.workmanagement.domain.project.service.result.ProjectSummaryResult;
 import com.example.workmanagement.global.response.ApiResponse;
@@ -15,16 +16,18 @@ import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/projects")
-@Tag(name = "프로젝트", description = "프로젝트 생성 및 내 프로젝트 조회 API")
+@Tag(name = "프로젝트", description = "프로젝트 생성/조회/수정/삭제 API")
 public class ProjectController {
 
     private final ProjectCommandService projectCommandService;
@@ -73,8 +76,41 @@ public class ProjectController {
             @RequestBody
             ProjectCreateRequest request
     ) {
-        ProjectCreateCommand command = request.toCommand(actorId);
-        ProjectDetailResult result = projectCommandService.createProject(command);
+        ProjectDetailResult result = projectCommandService.createProject(request.toCommand(actorId));
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(result));
+    }
+
+    @PutMapping("/{projectId}")
+    @Operation(summary = "프로젝트 수정", description = "프로젝트 정보를 수정합니다.")
+    public ResponseEntity<ApiResponse<ProjectDetailResult>> updateProject(
+            @Parameter(hidden = true)
+            @AuthenticatedUserId
+            Long actorId,
+
+            @Parameter(description = "프로젝트 ID", example = "10")
+            @PathVariable
+            Long projectId,
+
+            @Valid
+            @RequestBody
+            ProjectUpdateRequest request
+    ) {
+        ProjectDetailResult result = projectCommandService.updateProject(request.toCommand(projectId, actorId));
+        return ResponseEntity.ok(ApiResponse.success(result));
+    }
+
+    @DeleteMapping("/{projectId}")
+    @Operation(summary = "프로젝트 삭제", description = "프로젝트를 삭제합니다.")
+    public ResponseEntity<Void> deleteProject(
+            @Parameter(hidden = true)
+            @AuthenticatedUserId
+            Long actorId,
+
+            @Parameter(description = "프로젝트 ID", example = "10")
+            @PathVariable
+            Long projectId
+    ) {
+        projectCommandService.deleteProject(new ProjectDeleteCommand(projectId, actorId));
+        return ResponseEntity.noContent().build();
     }
 }
