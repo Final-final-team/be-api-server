@@ -18,6 +18,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
+import java.util.Objects;
 
 @Entity
 @Table(name = "projects")
@@ -53,10 +54,20 @@ public class Project {
 
     @Builder
     public Project(String name, String description, String imageUrl) {
-        this.name = name;
+        this.name = Objects.requireNonNull(name, "name must not be null");
         this.description = description;
         this.imageUrl = imageUrl;
         this.status = ProjectStatus.ACTIVE;
+    }
+
+    public void updateBasicInfo(String name, String description, String imageUrl) {
+        this.name = Objects.requireNonNull(name, "name must not be null");
+        this.description = description;
+        this.imageUrl = imageUrl;
+    }
+
+    public void archive() {
+        this.status = ProjectStatus.ARCHIVED;
     }
 
 }
