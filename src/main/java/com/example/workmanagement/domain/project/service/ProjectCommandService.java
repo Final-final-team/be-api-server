@@ -104,6 +104,16 @@ public class ProjectCommandService {
         projectRepository.delete(project);
     }
 
+    // policy: PRJ-F-03, PJM-P-05
+    public Project getProjectById(Long projectId, Long actorId) {
+        validatePositiveId(projectId, "projectId");
+        validatePositiveId(actorId, "actorId");
+        projectMemberRepository.findByProjectIdAndUserIdAndStatus(projectId, actorId, ProjectMemberStatus.ACTIVE)
+                .orElseThrow(() -> new ProjectDomainException(ProjectErrorCode.PROJECT_ACCESS_DENIED));
+        return projectRepository.findById(projectId)
+                .orElseThrow(() -> new ProjectDomainException(ProjectErrorCode.PROJECT_NOT_FOUND));
+    }
+
     // policy: PRJ-F-04
     public Project archiveProject(ProjectArchiveCommand command) {
         requireArchiveCommand(command);

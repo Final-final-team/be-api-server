@@ -57,23 +57,36 @@ public class MembershipCommandService {
 
         ensureProjectExists(command.projectId());
 
+        if (command.actorId().equals(command.targetUserId())) {
+            ProjectMember selfMember = upsertTargetMember(command.projectId(), command.targetUserId());
+            assignDefaultMemberRole(command.projectId(), selfMember.getId(), selfMember.getId());
+            return;
+        }
+
         ProjectMember actorMember = loadActiveMember(command.projectId(), command.actorId());
         if (!permissionChecker.hasProjectPermission(command.projectId(), command.actorId(), ProjectPermission.INVITE)) {
             throw new ProjectDomainException(ProjectErrorCode.PROJECT_ACCESS_DENIED);
         }
 
-        ProjectMember targetMember = projectMemberRepository.findByProjectIdAndUserId(command.projectId(), command.targetUserId())
+        ProjectMember targetMember = upsertTargetMember(command.projectId(), command.targetUserId());
+
+        assignDefaultMemberRole(command.projectId(), actorMember.getId(), targetMember.getId());
+    }
+
+    private ProjectMember upsertTargetMember(Long projectId, Long targetUserId) {
+        ProjectMember targetMember = projectMemberRepository.findByProjectIdAndUserId(projectId, targetUserId)
                 .orElse(null);
 
         if (targetMember == null) {
-            targetMember = projectMemberRepository.save(new ProjectMember(command.projectId(), command.targetUserId()));
-        } else if (targetMember.getStatus() == ProjectMemberStatus.ACTIVE) {
-            throw new ProjectDomainException(ProjectErrorCode.PROJECT_MEMBER_ALREADY_EXISTS);
-        } else {
-            targetMember.ReinstateMember();
+            return projectMemberRepository.save(new ProjectMember(projectId, targetUserId));
         }
 
-        assignDefaultMemberRole(command.projectId(), actorMember.getId(), targetMember.getId());
+        if (targetMember.getStatus() == ProjectMemberStatus.ACTIVE) {
+            throw new ProjectDomainException(ProjectErrorCode.PROJECT_MEMBER_ALREADY_EXISTS);
+        }
+
+        targetMember.ReinstateMember();
+        return targetMember;
     }
 
     // policy: PJM-F-03, PJM-P-05, PJM-P-06

@@ -1,5 +1,10 @@
 package com.example.workmanagement.global.role.service;
 
+import com.example.workmanagement.domain.project.entity.ProjectMember;
+import com.example.workmanagement.domain.project.entity.ProjectMemberStatus;
+import com.example.workmanagement.domain.project.repository.ProjectMemberRepository;
+import com.example.workmanagement.global.authorization.PermissionChecker;
+import com.example.workmanagement.global.authorization.permission.ProjectPermission;
 import com.example.workmanagement.global.role.entity.Role;
 import com.example.workmanagement.global.role.entity.RoleAuditActionType;
 import com.example.workmanagement.global.role.entity.RoleAuditLog;
@@ -22,15 +27,21 @@ public class RoleManagementService {
     private final RoleRepository roleRepository;
     private final ProjectMemberRoleRepository projectMemberRoleRepository;
     private final RoleAuditLogRepository roleAuditLogRepository;
+    private final ProjectMemberRepository projectMemberRepository;
+    private final PermissionChecker permissionChecker;
 
     public RoleManagementService(
             RoleRepository roleRepository,
             ProjectMemberRoleRepository projectMemberRoleRepository,
-            RoleAuditLogRepository roleAuditLogRepository
+            RoleAuditLogRepository roleAuditLogRepository,
+            ProjectMemberRepository projectMemberRepository,
+            PermissionChecker permissionChecker
     ) {
         this.roleRepository = roleRepository;
         this.projectMemberRoleRepository = projectMemberRoleRepository;
         this.roleAuditLogRepository = roleAuditLogRepository;
+        this.projectMemberRepository = projectMemberRepository;
+        this.permissionChecker = permissionChecker;
     }
 
     // policy: ROL-P-02, ROL-P-07
@@ -38,6 +49,7 @@ public class RoleManagementService {
         requireCommand(command);
         validatePositiveId(command.projectId(), "projectId");
         validatePositiveId(command.actorPmId(), "actorPmId");
+        ProjectMember actorMember = requireRoleManagePermission(command.projectId(), command.actorPmId());
 
         String roleCode = normalizeRequired(command.code(), "code");
         String roleName = normalizeRequired(command.name(), "name");
@@ -60,7 +72,7 @@ public class RoleManagementService {
                 defaultBits(command.taskPermissionBits()),
                 defaultBits(command.reviewPermissionBits()),
                 command.leaderRole(),
-                command.actorPmId()
+                actorMember.getId()
         );
 
         Role savedRole = roleRepository.save(role);
@@ -68,7 +80,7 @@ public class RoleManagementService {
         RoleAuditLog auditLog = RoleAuditLog.of(
                 command.projectId(),
                 savedRole.getId(),
-                command.actorPmId(),
+                actorMember.getId(),
                 RoleAuditActionType.ROLE_CREATED,
                 null,
                 buildRoleInfoJson(roleCode, roleName),
@@ -85,6 +97,7 @@ public class RoleManagementService {
         validatePositiveId(command.projectId(), "projectId");
         validatePositiveId(command.roleId(), "roleId");
         validatePositiveId(command.actorPmId(), "actorPmId");
+        ProjectMember actorMember = requireRoleManagePermission(command.projectId(), command.actorPmId());
 
         Role role = loadRoleInProject(command.projectId(), command.roleId());
         if (role.getIsSystem()) {
@@ -105,7 +118,7 @@ public class RoleManagementService {
         RoleAuditLog auditLog = RoleAuditLog.of(
                 command.projectId(),
                 role.getId(),
-                command.actorPmId(),
+                actorMember.getId(),
                 RoleAuditActionType.ROLE_UPDATED,
                 beforeJson,
                 buildRoleInfoJson(role.getCode(), normalizedName),
@@ -122,6 +135,7 @@ public class RoleManagementService {
         validatePositiveId(command.projectId(), "projectId");
         validatePositiveId(command.roleId(), "roleId");
         validatePositiveId(command.actorPmId(), "actorPmId");
+        ProjectMember actorMember = requireRoleManagePermission(command.projectId(), command.actorPmId());
 
         Role role = loadRoleInProject(command.projectId(), command.roleId());
         if (role.getIsSystem()) {
@@ -138,13 +152,33 @@ public class RoleManagementService {
         RoleAuditLog auditLog = RoleAuditLog.of(
                 command.projectId(),
                 role.getId(),
-                command.actorPmId(),
+                actorMember.getId(),
                 RoleAuditActionType.ROLE_DELETED,
                 beforeJson,
                 null,
                 Instant.now()
         );
         roleAuditLogRepository.save(auditLog);
+    }
+
+    private ProjectMember requireRoleManagePermission(Long projectId, Long actorIdentifier) {
+        ProjectMember actorMember = resolveActiveActorMember(projectId, actorIdentifier);
+        if (!permissionChecker.hasProjectPermission(projectId, actorMember.getUserId(), ProjectPermission.ROLE_MANAGE)) {
+            throw new RoleDomainException(RoleErrorCode.ROLE_ACCESS_DENIED);
+        }
+        return actorMember;
+    }
+
+    private ProjectMember resolveActiveActorMember(Long projectId, Long actorIdentifier) {
+        return projectMemberRepository.findById(actorIdentifier)
+                .filter(member -> member.getProjectId().equals(projectId))
+                .filter(member -> member.getStatus() == ProjectMemberStatus.ACTIVE)
+                .or(() -> projectMemberRepository.findByProjectIdAndUserIdAndStatus(
+                        projectId,
+                        actorIdentifier,
+                        ProjectMemberStatus.ACTIVE
+                ))
+                .orElseThrow(() -> new RoleDomainException(RoleErrorCode.ROLE_ACCESS_DENIED));
     }
 
     private Role loadRoleInProject(Long projectId, Long roleId) {
