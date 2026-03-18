@@ -7,6 +7,9 @@ public final class ReviewPermissions {
     // REVIEW_ADMIN_OVERRIDE 와 다르게 과거 액션별 상수로 남아 있다.
     // 인가 포트와 헤더 계약을 정책 기준 상수 체계로 정리해야 한다.
     public static final String ADMIN_OVERRIDE = "ADMIN_OVERRIDE";
+    public static final String REVIEW_VIEW = "REVIEW_VIEW";
+    public static final String REVIEW_DECIDE = "REVIEW_DECIDE";
+    public static final String REVIEW_ADMIN_OVERRIDE = "REVIEW_ADMIN_OVERRIDE";
     public static final String REVIEW_SUBMIT = "REVIEW_SUBMIT";
     public static final String REVIEW_UPDATE = "REVIEW_UPDATE";
     public static final String REVIEW_APPROVE = "REVIEW_APPROVE";

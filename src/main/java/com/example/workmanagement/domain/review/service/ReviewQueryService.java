@@ -183,7 +183,8 @@ public class ReviewQueryService {
         // TODO 정책 코드: RVW-P-02-001, RVW-P-03-001
         // 현재 조회 인가는 참여자/결정권자 관계 기반의 legacy 규칙이다.
         // 정책은 프로젝트 소속 + REVIEW_VIEW permission 기준의 전역 조회를 요구한다.
-        return review.getSubmittedBy().equals(actor.actorId())
+        return reviewAuthorizationPort.canView(review, actor)
+                || review.getSubmittedBy().equals(actor.actorId())
                 || reviewReferenceRepository.existsByReview_IdAndUserId(review.getId(), actor.actorId())
                 || reviewAdditionalReviewerRepository.existsByReview_IdAndUserId(review.getId(), actor.actorId())
                 || reviewAuthorizationPort.canApprove(review, actor)

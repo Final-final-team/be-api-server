@@ -13,7 +13,15 @@ public class TemporaryReviewAuthorizationService implements ReviewAuthorizationP
     // Review BC 는 필요한 permission 보유 여부 같은 결과만 전달받아 사용하도록 정리한다.
 
     /**
-     * 임시 구현에서는 permission 헤더 또는 관리자 예외 권한으로 상신 가능 여부를 판정한다.
+     * 임시 구현에서는 permission 스냅샷 또는 관리자 예외 권한으로 조회 가능 여부를 판정한다.
+     */
+    @Override
+    public boolean canView(Review review, ActorContext actor) {
+        return hasPermission(actor, ReviewPermissions.REVIEW_VIEW);
+    }
+
+    /**
+     * 임시 구현에서는 permission 스냅샷 또는 관리자 예외 권한으로 상신 가능 여부를 판정한다.
      */
     @Override
     public boolean canSubmit(Task task, ActorContext actor) {
@@ -29,19 +37,19 @@ public class TemporaryReviewAuthorizationService implements ReviewAuthorizationP
     }
 
     /**
-     * 임시 구현에서는 permission 헤더 또는 관리자 예외 권한으로 승인 가능 여부를 판정한다.
+     * 임시 구현에서는 permission 스냅샷 또는 관리자 예외 권한으로 승인 가능 여부를 판정한다.
      */
     @Override
     public boolean canApprove(Review review, ActorContext actor) {
-        return hasPermission(actor, ReviewPermissions.REVIEW_APPROVE);
+        return hasAnyPermission(actor, ReviewPermissions.REVIEW_DECIDE, ReviewPermissions.REVIEW_APPROVE);
     }
 
     /**
-     * 임시 구현에서는 permission 헤더 또는 관리자 예외 권한으로 반려 가능 여부를 판정한다.
+     * 임시 구현에서는 permission 스냅샷 또는 관리자 예외 권한으로 반려 가능 여부를 판정한다.
      */
     @Override
     public boolean canReject(Review review, ActorContext actor) {
-        return hasPermission(actor, ReviewPermissions.REVIEW_REJECT);
+        return hasAnyPermission(actor, ReviewPermissions.REVIEW_DECIDE, ReviewPermissions.REVIEW_REJECT);
     }
 
     /**
@@ -105,5 +113,18 @@ public class TemporaryReviewAuthorizationService implements ReviewAuthorizationP
      */
     private boolean hasPermission(ActorContext actor, String permission) {
         return actor.isAdminOverride() || actor.hasPermission(permission);
+    }
+
+    private boolean hasAnyPermission(ActorContext actor, String... permissions) {
+        if (actor.isAdminOverride()) {
+            return true;
+        }
+
+        for (String permission : permissions) {
+            if (actor.hasPermission(permission)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

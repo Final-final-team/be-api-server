@@ -8,6 +8,11 @@ import com.example.workmanagement.domain.task.domain.model.Task;
 public interface ReviewAuthorizationPort {
 
     /**
+     * 요청자가 검토 조회 권한을 보유하는지 확인한다.
+     */
+    boolean canView(Review review, ActorContext actor);
+
+    /**
      * 요청자가 검토 상신 전역 권한을 보유하는지 확인한다.
      */
     boolean canSubmit(Task task, ActorContext actor);

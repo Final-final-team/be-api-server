@@ -1,12 +1,13 @@
 package com.example.workmanagement.domain.review.controller;
 
 import com.example.workmanagement.domain.review.authorization.ActorContext;
-import com.example.workmanagement.domain.review.authorization.ActorContextResolver;
+import com.example.workmanagement.domain.review.authorization.ReviewActorContextFactory;
 import com.example.workmanagement.domain.review.dto.ReviewCommentCreateRequest;
 import com.example.workmanagement.domain.review.dto.ReviewCommentUpdateRequest;
 import com.example.workmanagement.domain.review.service.ReviewCommandService;
 import com.example.workmanagement.domain.review.service.result.ReviewDetailResult;
 import com.example.workmanagement.global.response.ApiResponse;
+import com.example.workmanagement.global.security.resolver.AuthenticatedUserId;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,16 +29,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class ReviewCommentController {
 
     private final ReviewCommandService reviewCommandService;
-    private final ActorContextResolver actorContextResolver;
+    private final ReviewActorContextFactory reviewActorContextFactory;
     private final ReviewDtoMapper reviewDtoMapper;
 
     public ReviewCommentController(
             ReviewCommandService reviewCommandService,
-            ActorContextResolver actorContextResolver,
+            ReviewActorContextFactory reviewActorContextFactory,
             ReviewDtoMapper reviewDtoMapper
     ) {
         this.reviewCommandService = reviewCommandService;
-        this.actorContextResolver = actorContextResolver;
+        this.reviewActorContextFactory = reviewActorContextFactory;
         this.reviewDtoMapper = reviewDtoMapper;
     }
 
@@ -48,18 +49,17 @@ public class ReviewCommentController {
     @PostMapping
     @Operation(summary = "코멘트 생성", description = "검토에 새 코멘트를 등록합니다.")
     public ResponseEntity<ApiResponse<ReviewDetailResult>> addComment(
+            @Parameter(hidden = true)
+            @AuthenticatedUserId
+            Long actorId,
             @Parameter(description = "대상 검토 ID", example = "10")
             @PathVariable Long reviewId,
-            @Parameter(description = "요청자 사용자 ID", example = "301")
-            @RequestHeader("X-Actor-Id") String actorId,
-            @RequestHeader(value = "X-Actor-Roles", required = false) String roles,
-            @RequestHeader(value = "X-Actor-Permissions", required = false) String permissions,
             @Valid @RequestBody ReviewCommentCreateRequest request
     ) {
         ReviewDetailResult result = reviewCommandService.addComment(
                 reviewId,
                 reviewDtoMapper.toCreateCommentCommand(request),
-                resolveActor(actorId, roles, permissions)
+                resolveReviewActor(actorId, reviewId)
         );
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(result
@@ -73,21 +73,20 @@ public class ReviewCommentController {
     @PatchMapping("/{commentId}")
     @Operation(summary = "코멘트 수정", description = "기존 검토 코멘트의 내용을 수정합니다.")
     public ResponseEntity<ApiResponse<ReviewDetailResult>> updateComment(
+            @Parameter(hidden = true)
+            @AuthenticatedUserId
+            Long actorId,
             @Parameter(description = "대상 검토 ID", example = "10")
             @PathVariable Long reviewId,
             @Parameter(description = "수정할 코멘트 ID", example = "7")
             @PathVariable Long commentId,
-            @Parameter(description = "요청자 사용자 ID", example = "301")
-            @RequestHeader("X-Actor-Id") String actorId,
-            @RequestHeader(value = "X-Actor-Roles", required = false) String roles,
-            @RequestHeader(value = "X-Actor-Permissions", required = false) String permissions,
             @Valid @RequestBody ReviewCommentUpdateRequest request
     ) {
         ReviewDetailResult result = reviewCommandService.updateComment(
                 reviewId,
                 commentId,
                 reviewDtoMapper.toUpdateCommentCommand(request),
-                resolveActor(actorId, roles, permissions)
+                resolveReviewActor(actorId, reviewId)
         );
         return ResponseEntity.ok(ApiResponse.success(result
         ));
@@ -100,28 +99,24 @@ public class ReviewCommentController {
     @DeleteMapping("/{commentId}")
     @Operation(summary = "코멘트 삭제", description = "검토에 등록된 코멘트를 삭제합니다.")
     public ResponseEntity<ApiResponse<ReviewDetailResult>> deleteComment(
+            @Parameter(hidden = true)
+            @AuthenticatedUserId
+            Long actorId,
             @Parameter(description = "대상 검토 ID", example = "10")
             @PathVariable Long reviewId,
             @Parameter(description = "삭제할 코멘트 ID", example = "7")
-            @PathVariable Long commentId,
-            @Parameter(description = "요청자 사용자 ID", example = "301")
-            @RequestHeader("X-Actor-Id") String actorId,
-            @RequestHeader(value = "X-Actor-Roles", required = false) String roles,
-            @RequestHeader(value = "X-Actor-Permissions", required = false) String permissions
+            @PathVariable Long commentId
     ) {
         ReviewDetailResult result = reviewCommandService.deleteComment(
                 reviewId,
                 commentId,
-                resolveActor(actorId, roles, permissions)
+                resolveReviewActor(actorId, reviewId)
         );
         return ResponseEntity.ok(ApiResponse.success(result
         ));
     }
 
-    /**
-     * 임시 헤더 값을 ActorContext로 변환한다.
-     */
-    private ActorContext resolveActor(String actorId, String roles, String permissions) {
-        return actorContextResolver.resolve(actorId, roles, permissions);
+    private ActorContext resolveReviewActor(Long actorId, Long reviewId) {
+        return reviewActorContextFactory.fromReview(actorId, reviewId);
     }
 }
