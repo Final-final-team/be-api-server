@@ -101,4 +101,16 @@ public class AuthCookieService {
 
         headers.add(HttpHeaders.SET_COOKIE, cookie.toString());
     }
+
+    public void expireSessionCookie(HttpHeaders headers) {
+        ResponseCookie cookie = ResponseCookie.from("JSESSIONID", "")
+                .httpOnly(true)
+                .secure(authProperties.cookieSecure())
+                .path("/")
+                .sameSite("None")
+                .maxAge(0)
+                .build();
+
+        headers.add(HttpHeaders.SET_COOKIE, cookie.toString());
+    }
 }

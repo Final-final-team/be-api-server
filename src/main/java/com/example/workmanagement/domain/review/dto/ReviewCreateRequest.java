@@ -19,6 +19,15 @@ public record ReviewCreateRequest(
         @ArraySchema(schema = @Schema(description = "참조자로 지정할 사용자 ID", example = "102"))
         @Size(max = 50) // 정책 코드: RVW-P-05-006 (참조자 최대 50명)
         List<Long> referenceUserIds,
+        @ArraySchema(schema = @Schema(description = "참조자로 지정할 사용자 이름", example = "김하늘"))
+        @Size(max = 50)
+        List<String> referenceUserNames,
+        @ArraySchema(schema = @Schema(description = "추가 검토자로 지정할 사용자 ID", example = "202"))
+        @Size(max = 20)
+        List<Long> additionalReviewerUserIds,
+        @ArraySchema(schema = @Schema(description = "추가 검토자로 지정할 사용자 이름", example = "이서진"))
+        @Size(max = 20)
+        List<String> additionalReviewerUserNames,
         @ArraySchema(schema = @Schema(implementation = AttachmentDraft.class, description = "초기 첨부 파일 정보"))
         @Size(max = 10) // 정책 코드: RVW-P-07-003 (첨부 최대 10개)
         List<@Valid AttachmentDraft> attachments

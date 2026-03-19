@@ -77,18 +77,21 @@ public class AuthController {
     @PostMapping("/api/auth/logout")
     @Operation(summary = "로그아웃", description = "현재 로그인 사용자의 리프레시 토큰을 폐기하고 인증 쿠키를 만료시킵니다.")
     public ResponseEntity<ApiResponse<Void>> logout(
-            @AuthenticationPrincipal Jwt jwt
+            @AuthenticationPrincipal Jwt jwt,
+            @CookieValue(value = "refresh_token", required = false) String refreshToken
     ) {
-        // JWT subject를 숫자 userId로 해석한다.
-        Long userId = resolveUserId(jwt);
-
-        // 서버 상태(리프레시 토큰) 정리
-        userAccountLifecycleService.logout(userId);
+        if (jwt != null) {
+            Long userId = resolveUserId(jwt);
+            userAccountLifecycleService.logout(userId);
+        } else {
+            refreshTokenService.invalidate(refreshToken);
+        }
 
         // 브라우저 쿠키 정리
         HttpHeaders headers = new HttpHeaders();
         authCookieService.expireAccessTokenCookie(headers);
         authCookieService.expireRefreshTokenCookie(headers);
+        authCookieService.expireSessionCookie(headers);
 
         return ResponseEntity.ok()
                 .headers(headers)

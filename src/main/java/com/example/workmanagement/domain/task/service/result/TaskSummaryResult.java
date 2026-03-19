@@ -5,6 +5,7 @@ import com.example.workmanagement.domain.task.domain.model.TaskStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 
 @Schema(description = "업무 목록 요약 응답")
 public record TaskSummaryResult(
@@ -24,9 +25,42 @@ public record TaskSummaryResult(
         LocalDate dueDate,
         @Schema(description = "작성자 사용자 ID", example = "101")
         Long authorId,
+        @Schema(description = "담당자 목록")
+        List<TaskAssigneeResult> assignees,
         @Schema(description = "생성 시각", example = "2026-03-17T05:00:00Z")
         Instant createdAt,
         @Schema(description = "수정 시각", example = "2026-03-17T06:00:00Z")
         Instant updatedAt
 ) {
+
+    public TaskSummaryResult(
+            Long taskId,
+            Long projectId,
+            String title,
+            TaskStatus status,
+            TaskPriority priority,
+            LocalDate startDate,
+            LocalDate dueDate,
+            Long authorId,
+            Instant createdAt,
+            Instant updatedAt
+    ) {
+        this(taskId, projectId, title, status, priority, startDate, dueDate, authorId, List.of(), createdAt, updatedAt);
+    }
+
+    public TaskSummaryResult withAssignees(List<TaskAssigneeResult> assignees) {
+        return new TaskSummaryResult(
+                taskId,
+                projectId,
+                title,
+                status,
+                priority,
+                startDate,
+                dueDate,
+                authorId,
+                List.copyOf(assignees),
+                createdAt,
+                updatedAt
+        );
+    }
 }

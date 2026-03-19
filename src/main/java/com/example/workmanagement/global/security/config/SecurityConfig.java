@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.server.resource.web.BearerTokenResolver;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
@@ -29,6 +30,7 @@ public class SecurityConfig {
     SecurityFilterChain filterChain(
             HttpSecurity http,
             AuthenticationSuccessHandler oidcSuccessHandler,
+            ClientRegistrationRepository clientRegistrationRepository,
             BearerTokenResolver cookieBearerTokenResolver,
             RequiredConsentGateFilter requiredConsentGateFilter,
             UserExistenceGuardFilter userExistenceGuardFilter
@@ -50,6 +52,7 @@ public class SecurityConfig {
                                 "/oauth2/authorization/google",
                                 "/login/oauth2/code/google",
                                 "/api/auth/refresh",
+                                "/api/auth/logout",
                                 "/api/dev/auth/**"
                         )
                 )
@@ -62,6 +65,7 @@ public class SecurityConfig {
                                 "/",
                                 "/error",
                                 "/api/auth/refresh",
+                                "/api/auth/logout",
                                 "/api/dev/auth/**"
                         ).permitAll()
 
@@ -73,6 +77,11 @@ public class SecurityConfig {
                 .oauth2Login(oauth2 -> oauth2
 
                         // 구글 인증 서버와의 토큰 교환이 성공적으로 이루어진 경우에 후속 작업을 담당할 성공 핸들러 등록
+                        .authorizationEndpoint(endpoint -> endpoint
+                                .authorizationRequestResolver(
+                                        new PromptAwareAuthorizationRequestResolver(clientRegistrationRepository)
+                                )
+                        )
                         .successHandler(oidcSuccessHandler)
                 )
 

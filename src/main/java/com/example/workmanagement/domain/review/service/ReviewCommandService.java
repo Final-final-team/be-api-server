@@ -155,11 +155,13 @@ public class ReviewCommandService {
                 .orElse(1);
 
         validateInitialReferenceCount(command.referenceUserIds());
+        validateInitialAdditionalReviewerCount(command.additionalReviewerUserIds());
         validateAttachmentDrafts(command.attachments());
 
         task.markInReview();
         Review review = reviewRepository.save(Review.submit(taskId, nextRoundNo, command.content(), actor.actorId()));
         syncInitialReferences(review, command.referenceUserIds(), actor.actorId());
+        syncInitialAdditionalReviewers(review, command.additionalReviewerUserIds(), actor.actorId());
         syncInitialAttachments(review, command.attachments(), actor.actorId());
 
         recordHistory(
@@ -848,6 +850,18 @@ public class ReviewCommandService {
                 .forEach(reviewAttachmentRepository::save);
     }
 
+    private void syncInitialAdditionalReviewers(Review review, List<Long> additionalReviewerUserIds, Long actorId) {
+        if (additionalReviewerUserIds == null || additionalReviewerUserIds.isEmpty()) {
+            return;
+        }
+
+        additionalReviewerUserIds.stream()
+                .distinct()
+                .peek(userId -> validateAdditionalReviewerEligibility(review, userId))
+                .map(userId -> new ReviewAdditionalReviewer(review, userId, actorId))
+                .forEach(reviewAdditionalReviewerRepository::save);
+    }
+
     private void validateInitialReferenceCount(List<Long> referenceUserIds) {
         if (referenceUserIds == null || referenceUserIds.isEmpty()) {
             return;
@@ -855,6 +869,16 @@ public class ReviewCommandService {
         long distinctCount = referenceUserIds.stream().distinct().count();
         if (distinctCount > MAX_REFERENCE_COUNT) {
             throw new ReviewDomainException(ReviewErrorCode.REFERENCE_LIMIT_EXCEEDED);
+        }
+    }
+
+    private void validateInitialAdditionalReviewerCount(List<Long> additionalReviewerUserIds) {
+        if (additionalReviewerUserIds == null || additionalReviewerUserIds.isEmpty()) {
+            return;
+        }
+        long distinctCount = additionalReviewerUserIds.stream().distinct().count();
+        if (distinctCount > MAX_ADDITIONAL_REVIEWER_COUNT) {
+            throw new ReviewDomainException(ReviewErrorCode.ADDITIONAL_REVIEWER_LIMIT_EXCEEDED);
         }
     }
 

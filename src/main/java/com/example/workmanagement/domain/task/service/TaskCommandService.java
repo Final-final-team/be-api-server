@@ -21,9 +21,11 @@ import com.example.workmanagement.domain.task.service.command.TaskUpdateDueDateC
 import com.example.workmanagement.domain.task.service.command.TaskUpdatePriorityCommand;
 import com.example.workmanagement.domain.task.service.command.TaskUpdateStartDateCommand;
 import com.example.workmanagement.domain.task.service.command.TaskUpdateTitleCommand;
+import com.example.workmanagement.domain.task.service.result.TaskAssigneeResult;
 import com.example.workmanagement.domain.task.service.result.TaskDetailResult;
 import com.example.workmanagement.global.authorization.PermissionChecker;
 import com.example.workmanagement.global.authorization.permission.TaskPermission;
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -335,6 +337,10 @@ public class TaskCommandService {
     }
 
     private TaskDetailResult loadTaskDetail(Task task) {
+        List<TaskAssigneeResult> assignees = taskAssigneeRepository.findAssigneeRowsByTaskIdIn(List.of(task.id())).stream()
+                .map(row -> new TaskAssigneeResult(row.userId(), row.name()))
+                .toList();
+
         return new TaskDetailResult(
                 task.id(),
                 task.projectId(),
@@ -345,6 +351,7 @@ public class TaskCommandService {
                 task.priority(),
                 task.startDate(),
                 task.dueDate(),
+                assignees,
                 task.createdAt(),
                 task.updatedAt()
         );

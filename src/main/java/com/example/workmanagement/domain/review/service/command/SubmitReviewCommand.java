@@ -5,6 +5,7 @@ import java.util.List;
 public record SubmitReviewCommand(
         String content,
         List<Long> referenceUserIds,
+        List<Long> additionalReviewerUserIds,
         List<AttachmentDraft> attachments
 ) {
     public record AttachmentDraft(

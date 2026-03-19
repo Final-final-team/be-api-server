@@ -117,6 +117,16 @@ public class RefreshTokenService {
         );
     }
 
+    @Transactional
+    public void invalidate(String rawRefreshToken) {
+        if (rawRefreshToken == null || rawRefreshToken.isBlank()) {
+            return;
+        }
+
+        String hashed = hash(rawRefreshToken);
+        refreshTokenRepository.findByTokenHash(hashed).ifPresent(refreshTokenRepository::delete);
+    }
+
     // ----- helpers
 
     private String generateRawToken() {
